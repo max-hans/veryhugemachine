@@ -1,56 +1,57 @@
+// OpenCV
 import gab.opencv.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
-
 import org.opencv.core.Mat;
 import org.opencv.core.CvType;
-
-import processing.video.*;
-import blobDetection.*;
-
-import controlP5.*;
-ControlP5 cp5;
-
-Capture cam;
-BlobDetection theBlobDetection;
 OpenCV opencv;
 
-float blobThreshDelta = 0.001f;
 
-boolean showTransformed = false;
-
+// UI
+import controlP5.*;
+ControlP5 cp5;
 Textlabel coordX;
 Textlabel coordY;
 
-PImage img;
-PImage targetImg;
+int transformOffset = 20;
 
-Marker marker;
+int dragThresh = 10;
+boolean mouseLocked = false;
+int cornerSize = 10;
 
+
+// Communication
+import processing.serial.*;
+Serial port1;
+Serial port2;
+
+// Tracking
+import processing.video.*;
+Capture cam;
 boolean newFrame=false;
 
+import blobDetection.*;
+BlobDetection theBlobDetection;
+float blobThreshDelta = 0.001f;
 float detectionThreshold = 0.3f;
+
+int canvasSize;
+
+PImage img;
+PImage warpedCanvas;
+
 PVector markerPos;
 PVector newPos;
 
-int transformOffset = 20;
+Marker marker;
 
 ArrayList<PVector> transformPoints = new ArrayList<PVector>();
 ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
 
-int canvasSize;
-PImage warpedCanvas;
-
 PVector imageTransformDelta;
 
-boolean drawUnWarped = true;
-
-int dragThresh = 10;
-boolean mouseLocked = false;
-
-int cornerSize = 10;
 
 int state = 0;
 
@@ -68,23 +69,32 @@ void setup() {
 
   cp5 = new ControlP5(this);
   createInterface();
-  //imageTransformDelta = new PVector((width-cam.width)/2, (height-cam.height)/2);
+  
   imageTransformDelta = new PVector(30, 100);
+  
   opencv = new OpenCV(this, cam);
-  // BlobDetection
-  // img which will be sent to detection (a smaller copy of the cam frame);
-  img = new PImage(canvasSize/2, canvasSize/2); 
+  img = new PImage(canvasSize/2, canvasSize/2);
+  
   theBlobDetection = new BlobDetection(img.width, img.height);
   theBlobDetection.setPosDiscrimination(true);
   theBlobDetection.setThreshold(detectionThreshold);
+  
   markerPos = new PVector(0, 0);
   warpedCanvas = new PImage(canvasSize, canvasSize);
+  
   resetTransformArray(cam);
+  
   for (PVector P : transformPoints) {
     dragPoints.add(new DragPoint(P));
   }
 
   marker = new Marker(0.5, 0.5, canvasSize, canvasSize);
+  
+  String portName1 = Serial.list()[1];
+  String portName2 = Serial.list()[2];
+  port1 = new Serial(this,portName1,115200);
+  port2 = new Serial(this,portName2,115200);
+  
 }
 
 // ====================================================================================================
@@ -93,65 +103,57 @@ void draw()
 {  
   background(30);
 
+  // Display camera image
   pushMatrix();
   translate(imageTransformDelta.x, imageTransformDelta.y);
+
   imageMode(CORNER);
   image(cam, 0, 0);
+
   drawCorners(0, 0, cam.width, cam.height, cornerSize);
 
   for (DragPoint dP : dragPoints) {
     dP.update();
     dP.display();
-    
   }
   drawFrame();
-  translate(imageTransformDelta.x + cam.width + 30 , 0);
+  popMatrix();
+
+  // Display warped image
+  pushMatrix();
+  translate(imageTransformDelta.x + cam.width + 30, imageTransformDelta.y);
   image(warpedCanvas, 0, 0);
   drawCorners(0, 0, warpedCanvas.width, warpedCanvas.height, cornerSize);
   marker.display();
   popMatrix();
   
-  
-  println(marker.getPosNormalized());
+  // Update video frames
+  if (newFrame)
+  {
+    newFrame=false;
 
-if (newFrame)
-{
-  newFrame=false;
+    opencv.loadImage(cam);
+    warpImg(warpedCanvas, canvasSize, transformPoints);
 
-  opencv.loadImage(cam);
-  warpImg(warpedCanvas, canvasSize, transformPoints);
-  img.copy(warpedCanvas, 0, 0, canvasSize, canvasSize, 
-    0, 0, img.width, img.height);
-  img.filter(INVERT);
-  fastblur(img, 2);
-  theBlobDetection.computeBlobs(img.pixels);
-  int blobCount = theBlobDetection.getBlobNb();
-  if (mouseLocked) {
-    if (blobCount > 2) {
-      detectionThreshold -= blobThreshDelta;
-      theBlobDetection.setThreshold(detectionThreshold);
-    } else if (blobCount == 0) {
-      detectionThreshold += (3*blobThreshDelta);
-      theBlobDetection.setThreshold(detectionThreshold);
+    img.copy(warpedCanvas, 0, 0, canvasSize, canvasSize,0, 0, img.width, img.height);
+    img.filter(INVERT);
+    
+    fastblur(img, 2);
+    theBlobDetection.computeBlobs(img.pixels);
+    int blobCount = theBlobDetection.getBlobNb();
+    if (mouseLocked) {
+      if (blobCount > 2) {
+        detectionThreshold -= blobThreshDelta;
+        theBlobDetection.setThreshold(detectionThreshold);
+      } else if (blobCount == 0) {
+        detectionThreshold += (3*blobThreshDelta);
+        theBlobDetection.setThreshold(detectionThreshold);
+      }
     }
-  }
-  //println(blobCount);
-  marker.updatePos(getMarkerPosition());
-  updateMarkerPos();
-}
-}
-
-void keyPressed() {
-  //calibrateDetection();
-  if (key == 'n') {
-    if (state == 0) {
-      state = 1;
-    } else if (state == 1) {
-      state = 0;
-    }
+    marker.updatePos(getMarkerPosition());
+    updateMarkerPos();
   }
 }
-
 
 void mousePressed() {
   if (!mouseLocked) {

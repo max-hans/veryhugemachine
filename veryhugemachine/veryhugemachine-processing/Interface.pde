@@ -105,6 +105,7 @@ void drawFrame() {
     //dP.display();
     vertex(dP.pos.x, dP.pos.y);
   }
+  endContour();
   endShape(CLOSE);
 }
 

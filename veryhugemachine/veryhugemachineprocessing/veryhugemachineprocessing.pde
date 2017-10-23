@@ -24,8 +24,8 @@ int cornerSize = 10;
 
 // Communication
 import processing.serial.*;
-Serial port1;
-Serial port2;
+import websockets.*;
+WebsocketClient wsc;
 
 // Tracking
 import processing.video.*;
@@ -52,8 +52,14 @@ ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
 
 PVector imageTransformDelta;
 
+Serial port1;
+Serial port2;
 
+Motor motor1;
+Motor motor2;
 int state = 0;
+
+String serverAdress = "ws://127.0.0.1:8080";
 
 // ====================================================================================================
 
@@ -92,15 +98,24 @@ void setup() {
   
   String portName1 = Serial.list()[1];
   String portName2 = Serial.list()[2];
+  
   port1 = new Serial(this,portName1,115200);
   port2 = new Serial(this,portName2,115200);
   
+  motor1 = new Motor(port1);
+  motor2 = new Motor(port2);
+  
+  wsc= new WebsocketClient(this, serverAdress);
 }
 
 // ====================================================================================================
 
 void draw()
 {  
+  
+  motor1.update();
+  motor2.update();
+  
   background(30);
 
   // Display camera image
@@ -169,4 +184,9 @@ void mouseReleased() {
     DP.isDragged = false;
   }
   mouseLocked = false;
+}
+
+void keyPressed(){
+  if(key == 'm')sendData();
+  if(key == 'l')activateLearning();
 }

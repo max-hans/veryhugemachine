@@ -1,6 +1,7 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
-#include <EEPROM.h> 
+#include <EEPROM.h>
+#include <CommandHandler.h>
 
 #define STEPPIN1  7
 #define DIRPIN1   8
@@ -9,6 +10,8 @@
 #define SENSORPIN2 4
 
 #define CALIBRATEPIN 2
+
+CommandHandler<> SerialCommandHandler;
 
 byte state = 0;
 
@@ -33,11 +36,15 @@ void setup() {
   pinMode(SENSORPIN1, INPUT);
   pinMode(SENSORPIN2, INPUT);
   pinMode(CALIBRATEPIN, INPUT);
+  Serial.begin(115200);
+  SerialCommandHandler.AddCommand(F("moveTo"), updateTarget);
+  SerialCommandHandler.AddCommand(F("recalibrate"), recalibrate);
+
   axis1.setMaxSpeed(400);
   axis1.setSpeed(400);
   axis1.setAcceleration(500);
   state = 1;
-  Serial.begin(115200);
+
   axis1.setPinsInverted(invertDir, false, false);
   axis1.setSpeed(calibSpeed);
 
@@ -46,14 +53,20 @@ void setup() {
   Serial.println("------------------------------------");
   Serial.println("Starting up");
   printProgress();
-  if(maxDist == 0){
+  if (maxDist == 0) {
     Serial.println("No data found - please calibrate");
   }
-  else{
+  else {
     Serial.println("Data found : max distance " + String(maxDist));
   }
-  Serial.println("------------------------------------");
   
+
+  runToZero();
+  
+  Serial.println("Waiting for directions--------------");
+  Serial.println("------------------------------------");
+
+
 
   state = 0;
 
@@ -61,59 +74,63 @@ void setup() {
 
 void loop() {
 
-
+  SerialCommandHandler.Process();
 
   switch (state) {
     case 0: {
+        break;
+      }
+
+    case 1: {
         axis1.run();
         break;
       }
-/*
+      /*
 
-    case 1: {
-        if (digitalRead(SENSORPIN1)) {
-          axis1.setCurrentPosition(0);
-          axis1.setSpeed(-calibSpeed);
-          state++;
-          Serial.println("----------------------------------");
-          Serial.println("Done calibrating Stop 1");
-          Serial.println("----------------------------------");
-          Serial.println("Setting Current Position: 0");
-          Serial.println("----------------------------------");
-          Serial.println("Running to other endpoint");
-          Serial.println("----------------------------------");
-          Serial.println();
-        }
-        else {
-          axis1.runSpeed();
-        }
-        break;
-      }
+          case 1: {
+              if (digitalRead(SENSORPIN1)) {
+                axis1.setCurrentPosition(0);
+                axis1.setSpeed(-calibSpeed);
+                state++;
+                Serial.println("----------------------------------");
+                Serial.println("Done calibrating Stop 1");
+                Serial.println("----------------------------------");
+                Serial.println("Setting Current Position: 0");
+                Serial.println("----------------------------------");
+                Serial.println("Running to other endpoint");
+                Serial.println("----------------------------------");
+                Serial.println();
+              }
+              else {
+                axis1.runSpeed();
+              }
+              break;
+            }
 
 
 
-    case 2: {
-        if (digitalRead(SENSORPIN2)) {
-          maxDist = axis1.currentPosition();
-          state = 0;
-          resetMotorData();
-          Serial.println("------------------------------------");
-          Serial.println("Done calibrating Stop 2");
-          Serial.println("----------------------------------");
-          Serial.println("Maximum Distance: " + String(maxDist));
-          Serial.println("------------------------------------");
-          lastPrint = millis();
-        }
-        else {
-          axis1.runSpeed();
-        }
-        break;
-      }
+          case 2: {
+              if (digitalRead(SENSORPIN2)) {
+                maxDist = axis1.currentPosition();
+                state = 0;
+                resetMotorData();
+                Serial.println("------------------------------------");
+                Serial.println("Done calibrating Stop 2");
+                Serial.println("----------------------------------");
+                Serial.println("Maximum Distance: " + String(maxDist));
+                Serial.println("------------------------------------");
+                lastPrint = millis();
+              }
+              else {
+                axis1.runSpeed();
+              }
+              break;
+            }
       */
 
   }
 
-  if (digitalRead(CALIBRATEPIN)) calibrate();
+  //if (digitalRead(CALIBRATEPIN)) calibrate();
 
 }
 
@@ -128,12 +145,12 @@ void resetMotorData() {
 
 
 void calibrate() {
-  
-  
+
+
   Serial.println("Starting calibration process");
   Serial.println("----------------------------------");
   Serial.println("Running to first stop!");
-  
+
   axis1.setSpeed(-normalSpeed);
   while (!digitalRead(SENSORPIN1)) {
     axis1.runSpeed();
@@ -148,7 +165,6 @@ void calibrate() {
   Serial.println("Setting Current Position: 0");
   Serial.println("------------------------------------");
   Serial.println("Running to second stop!");
-  
 
   axis1.setSpeed(normalSpeed);
 
@@ -193,12 +209,35 @@ long EEPROMReadlong(long address) {
   return ((four << 0) & 0xFF) + ((three << 8) & 0xFFFF) + ((two << 16) & 0xFFFFFF) + ((one << 24) & 0xFFFFFFFF);
 }
 
-void printProgress(){
-  
-  for(int i = 0; i<33;i+=3){
+void printProgress() {
+
+  for (int i = 0; i < 33; i += 3) {
     Serial.print("---");
     delay(100);
   }
   Serial.println("---");
+}
+
+void updateTarget(CommandParameter &parameter) {
+  double normalizedTarget = float(parameter.NextParameterAsInteger()) / 32767.0;
+  unsigned long absoluteTarget = (int)(maxDist * normalizedTarget);
+  axis1.moveTo(absoluteTarget);
+  state = 1;
+}
+
+void recalibrate(CommandParameter &parameter) {
+  calibrate();
+}
+
+void runToZero() {
+  Serial.println("------------------------------------");
+  Serial.println("Running to zero");
+  
+  axis1.setSpeed(-normalSpeed);
+  while (!digitalRead(SENSORPIN1)) {
+    axis1.runSpeed();
+  }
+  axis1.setCurrentPosition(0);
+  Serial.println("------------------------------------");
 }
 

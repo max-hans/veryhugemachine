@@ -54,8 +54,8 @@ void calibrateDetection() {
     count = updateBlobCount();
     detectionThreshold -= 0.001f;
     theBlobDetection.setThreshold(detectionThreshold);
-    println(count);
-    println(detectionThreshold);
+    //println(count);
+    //println(detectionThreshold);
   } while (count > 1 && detectionThreshold > 0);
 }
 

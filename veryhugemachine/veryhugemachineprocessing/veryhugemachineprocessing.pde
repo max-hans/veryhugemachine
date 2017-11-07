@@ -19,6 +19,8 @@ Textlabel motor1Pos;
 Textlabel motor2Pos;
 Slider abc;
 
+PrintWriter backupFile;
+
 Slider motor1target;
 Slider motor2target;
 
@@ -31,7 +33,11 @@ int dragThresh = 10;
 boolean mouseLocked = false;
 int cornerSize = 10;
 
+ArrayList<Motor> motors = new ArrayList<Motor>();
+Motor mTemp;
 
+FloatList samples;
+boolean sampling;
 // Communication
 import processing.serial.*;
 
@@ -43,7 +49,8 @@ WebsocketClient wsc;
 import mqtt.*;
 MQTTClient client;
 
-
+PFont p; // regular font
+PFont pb; // bold font
 // Tracking
 import processing.video.*;
 Capture cam;
@@ -69,12 +76,6 @@ ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
 
 PVector imageTransformDelta;
 
-Serial port1;
-Serial port2;
-
-Motor motor1;
-Motor motor2;
-
 float[] motorPositions = new float[2];
 boolean[] motorUpdated = {false, false};
 
@@ -87,7 +88,7 @@ int state = 0;
 
 String wsAdress = "ws://127.0.0.1";
 int wsPort = 8080;
-String mqttAdress = "mqtt://127.0.0.1";
+String mqttAdress = "mqtt://192.168.2.101";
 int mqttPort = 1883;
 
 String trackingChannel = "track";
@@ -97,28 +98,35 @@ String requestChannel = "rq";
 
 boolean drawVideo = true;
 
+int gridWidth = 20;
+
 // ====================================================================================================
 
 void setup() {
 
   size(1400, 1000);
+  try {
   cam = new Capture(this, 640, 480, "Microsoft® LifeCam VX-2000", 30);
   if (cam == null) {
     cam = new Capture(this, 640, 480);
   }
+  cam.start();
+  }
+  catch(NullPointerException e){
+    println("No camera attached - falling back to built-in.");
+    cam = new Capture(this, 640,480);
+    cam.start();
+  }
+  setupMQTT();
 
-  motor1 = new Motor(0);
-  motor2 = new Motor(1);
+
+
+
 
   canvasSize = cam.height;
-  cam.start();
+  
 
-  cp5 = new ControlP5(this);
-  createInterface();
-
-  client = new MQTTClient(this);
-
-  imageTransformDelta = new PVector(30, 100);
+  imageTransformDelta = new PVector(gridWidth, gridWidth);
 
   opencv = new OpenCV(this, cam);
   img = new PImage(canvasSize/2, canvasSize/2);
@@ -137,12 +145,10 @@ void setup() {
   }
 
   marker = new Marker(0.5, 0.5, canvasSize, canvasSize);
+  marker.addLabel(coordX, coordY);
 
-  
-
-  
-
-  
+  cp5 = new ControlP5(this);
+  createInterface();
 }
 
 // ====================================================================================================
@@ -150,66 +156,43 @@ void setup() {
 void draw()
 {  
   background(30);
-
-  //motor1.update();
-  //motor2.update();
-
-  sample();
-
   checkFrames();
-
   updateInterface();
-
   displayCamera();
   displayWarped();
 }
 
 // ====================================================================================================
 
-void sample() {
-  switch(sampleState) {
-  case 0:
-    break;
-  case 1:
-    {
-      if (millis() > lastSample + sampleFreq) {
-        motor1.requestPos();
-        motor2.requestPos();
-        sampleState = 2;
-        break;
-      }
+void startSampling() {
+  if (motors.size() > 0) {
+    println("Starting sampling procedure..."); 
+    backupFile = createWriter(getDateString() + "_data.csv");
+    sampleState = 1;
+    lastSample = millis();
+    for (Motor m : motors) {
+      m.samples = new FloatList();
     }
-  case 2:
-    {
-      if (motor1.received && motor2.received) {
-        sendDataPos();
-        sampleState = 1;
-        break;
-      }
-    }
+  }
+  println("No motors attached ... =(");
+}
+
+void stopSampling(){
+  if(sampling){
+    println("Stopping sampling procedure...");
+    println("Writing to file.");
+    sampleState = 0;
+    sampling = false;
+    backupFile.flush();
+    backupFile.close();
   }
 }
 
-void startSampling() {
-  sampleState = 1;
-  lastSample = millis();
-}
-
-void stopSampling() {
-  sampleState = 0;
-}
-
-void connectSerial(){
-  String portName1 = Serial.list()[1];
-  String portName2 = Serial.list()[2];
-  
-  port1 = new Serial(this, portName1, 115200);
-  port2 = new Serial(this, portName2, 115200);
-  
-  motor1.serial = port1;
-  motor2.serial = port2;
-  /*
-  motor1.startConnection(port1);
-  motor2.startConnection(port2);
-  */
+void sample() {
+  if (sampling) {
+    for (Motor m : motors) {
+      m.samplePos();
+    }
+    lastSample = millis();
+  }
 }

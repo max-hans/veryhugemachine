@@ -21,6 +21,7 @@ void calibrate() {
   axis1.setSpeed(-motorSpeed);
   statusByte = 0;
   Serial.println(statusByte);
+  sendStatus();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////

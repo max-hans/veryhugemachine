@@ -37,9 +37,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
     int inVal = atoi(parseChar);
     setNewSpeed(inVal);
   }
+
+  else if(topicString == "str"){
+    int inVal = atoi(parseChar);
+    if(inVal == 0){
+      doPublishPos = false;
+    }
+    else if(inVal == 1){
+      doPublishPos = true;
+    }
+  }
+  
   else {
     Serial.println("unknown command");
-  }
+  }  
 
   Serial.print("Message arrived [");
   Serial.print(topic);
@@ -57,6 +68,11 @@ void sendPosition() {
   String posPost = String(posVal, 5);
   client.publish(posString.c_str(), posPost.c_str());
   //Serial.println("Publishing position: " + posPost);
+}
+
+void sendStatus(){
+  String tmpString = String(statusByte);
+  client.publish(statusString.c_str(), tmpString.c_str());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,8 +126,10 @@ void reconnect() {
       resetString = prefix + "rst";
       speedString = prefix + "spd";
       targetString = prefix + "tgt";
-      posString += prefix;
-      posString += "pos";
+      startString = prefix + "str";
+      
+      posString = prefix + "pos";
+      statusString = prefix + "sts";
 
       client.subscribe(resetString.c_str());
       client.subscribe(speedString.c_str());
@@ -119,9 +137,20 @@ void reconnect() {
 
       Serial.println(registerMsg);
       client.publish("/register", registerMsg);
+
+      Serial.println("Listening on channels:");
       Serial.println(resetString);
       Serial.println(speedString);
       Serial.println(targetString);
+      Serial.print(startString);
+      Serial.println("");
+      
+      delay(100);
+      
+      Serial.println("Publishing to channels:");
+      Serial.println(posString);
+      Serial.println(statusString);
+      Serial.println("");
 
     } else {
 

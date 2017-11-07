@@ -251,6 +251,7 @@ void mouseReleased() {
 }
 
 void keyPressed() {
-  if (key == 'm')sendPos();
-  if (key == 'l')activateLearning();
+  motors.clear();
+  //if (key == 'm')sendPos();
+  //if (key == 'l')activateLearning();
 }

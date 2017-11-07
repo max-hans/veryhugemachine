@@ -122,14 +122,14 @@ void createInterface() {
     .setLabel("stop Sampling")
     ;
 
-  motor1target = cp5.addSlider("motor1target")
+  cp5.addSlider("motor1target")
     .setPosition(buttonX, 50 + uiDeltaY*12)
     .setSize(buttonWidth, buttonHeight)
     .setRange(0, 1000)
     .setValue(0)
     ;
 
-  motor2target = cp5.addSlider("motor2target")
+  cp5.addSlider("motor2target")
     .setPosition(buttonX, 50 + uiDeltaY*13)
     .setSize(buttonWidth, buttonHeight)
     .setRange(0, 1000)
@@ -171,24 +171,16 @@ void motor2reset() {
   motor2.recalibrate();
 }
 
-void motor1requestPos() {
-  motor1.requestPos();
-}
-
-void motor2requestPos() {
-  motor2.requestPos();
-}
-
 void toggleVideo() {
   drawVideo = !drawVideo;
 }
 
-void motor1target(float val){
-  motor1.moveTo(val/1000);
+void motor1target(int val){
+  motor1.updateTarget(val/1000);
 }
 
-void motor2target(float val){
-  motor2.moveTo(val/1000);
+void motor2target(int val){
+  motor2.updateTarget(val/1000);
 }
 
 // Update functions
@@ -200,6 +192,6 @@ void updateMarkerPos() {
 }
 
 void updateMotorPos() {
-  motor1Pos.setText("Motor1: [" + motor1.pos + "]");
-  motor2Pos.setText("Motor2: [" + motor2.pos + "]");
+  motor1Pos.setText("Motor1: [" + motor1.motorPosScaled + "]");
+  motor2Pos.setText("Motor2: [" + motor2.motorPosScaled + "]");
 }

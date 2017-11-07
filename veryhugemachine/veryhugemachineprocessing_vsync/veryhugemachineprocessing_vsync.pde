@@ -34,6 +34,13 @@ int cornerSize = 10;
 
 // Communication
 import processing.serial.*;
+import vsync.*;
+
+ValueReceiver receiver1;
+ValueSender sender1;
+
+ValueReceiver receiver2;
+ValueSender sender2;
 
 // Websocket
 import websockets.*;
@@ -107,14 +114,16 @@ void setup() {
     cam = new Capture(this, 640, 480);
   }
 
-  motor1 = new Motor(0);
-  motor2 = new Motor(1);
+  String portName1 = Serial.list()[1];
+  String portName2 = Serial.list()[2];
+  
+  motor1 = new Motor(this, portName1, 1);
+  motor2 = new Motor(this, portName2, 2);
 
   canvasSize = cam.height;
   cam.start();
 
-  cp5 = new ControlP5(this);
-  createInterface();
+
 
   client = new MQTTClient(this);
 
@@ -138,11 +147,9 @@ void setup() {
 
   marker = new Marker(0.5, 0.5, canvasSize, canvasSize);
 
-  
+  cp5 = new ControlP5(this);
+  createInterface();
 
-  
-
-  
 }
 
 // ====================================================================================================
@@ -154,11 +161,14 @@ void draw()
   //motor1.update();
   //motor2.update();
 
-  sample();
+  //sample();
 
   checkFrames();
 
   updateInterface();
+
+  motor1.handleData();
+  motor2.handleData();
 
   displayCamera();
   displayWarped();
@@ -166,27 +176,11 @@ void draw()
 
 // ====================================================================================================
 
+
 void sample() {
-  switch(sampleState) {
-  case 0:
-    break;
-  case 1:
-    {
-      if (millis() > lastSample + sampleFreq) {
-        motor1.requestPos();
-        motor2.requestPos();
-        sampleState = 2;
-        break;
-      }
-    }
-  case 2:
-    {
-      if (motor1.received && motor2.received) {
-        sendDataPos();
-        sampleState = 1;
-        break;
-      }
-    }
+
+  if (millis() > lastSample + sampleFreq) {
+    println(motor1.motorPosScaled + ", " + motor2.motorPosScaled);
   }
 }
 
@@ -199,17 +193,10 @@ void stopSampling() {
   sampleState = 0;
 }
 
-void connectSerial(){
-  String portName1 = Serial.list()[1];
-  String portName2 = Serial.list()[2];
-  
-  port1 = new Serial(this, portName1, 115200);
-  port2 = new Serial(this, portName2, 115200);
-  
-  motor1.serial = port1;
-  motor2.serial = port2;
-  /*
-  motor1.startConnection(port1);
-  motor2.startConnection(port2);
-  */
+void connectSerial() {
+  receiver1 = new ValueReceiver(this, port1);
+  sender1 = new ValueSender(this, port2);
+
+  receiver2 = new ValueReceiver(this, port1);
+  sender2 = new ValueSender(this, port2);
 }

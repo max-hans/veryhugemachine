@@ -7,6 +7,9 @@ class Marker{
   int scaleX;
   int scaleY;
   
+  Textlabel x;
+  Textlabel y;
+  
   float lerpAmt = 0.1;
   
   Marker(float _x, float _y, int _scaleX, int _scaleY){
@@ -15,10 +18,21 @@ class Marker{
     scaleY = _scaleY;
   }
    
+   
+   public void addLabel(Textlabel _x, Textlabel _y){
+     x = _x;
+     y = _y;
+   }
+   
+   
   public void display(int c){
     PVector posTemp = this.getPosScaled(scaleX,scaleY);
     setLineStyle(c);
     drawMarker(posTemp.x,posTemp.y,this.dia,5);
+    textFont(p);
+    fill(255);
+    text("x: [" +getPosNormalized().x+"]",posTemp.x + dia,posTemp.y);
+    text("x: [" +getPosNormalized().y+"]",posTemp.x + dia,posTemp.y+20);
   }
   
   public void setDiameter(int _dia){

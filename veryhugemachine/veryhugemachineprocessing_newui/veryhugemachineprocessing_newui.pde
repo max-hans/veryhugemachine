@@ -132,10 +132,10 @@ void setup() {
   
   setupMQTT();
 
-  canvasSize = cam.height;
-  
+  //canvasSize = cam.height;
+  canvasSize = 836;
 
-  imageTransformDelta = new PVector(gridWidth, gridWidth);
+  imageTransformDelta = new PVector(122, 122);
 
   opencv = new OpenCV(this, cam);
   img = new PImage(canvasSize/2, canvasSize/2);
@@ -165,11 +165,12 @@ void setup() {
 
 void draw()
 {  
-  background(30);
+  background(darkblue);
   checkFrames();
   updateInterface();
-  displayCamera();
+  //displayCamera();
   displayWarped();
+  drawCorners(122,122,836,836,18);
 }
 
 // ====================================================================================================

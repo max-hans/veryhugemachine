@@ -15,13 +15,13 @@ void messageReceived(String topic, byte[] payload) {
       boolean known = false;
       int inId = Integer.parseInt(msg);
       println("incoming: " + inId);
-        for (Motor m : motors) {
-          if (m.id == inId) {
-            println("motor ID " + inId + " already registered!");
-            known = true;
-            break;
-          }
+      for (Motor m : motors) {
+        if (m.id == inId) {
+          println("motor ID " + inId + " already registered!");
+          known = true;
+          break;
         }
+      }
       if (!known) {
         println("adding new motor - ID: " + msg);
         motors.add(new Motor(inId, this));

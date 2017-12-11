@@ -11,19 +11,24 @@ OpenCV opencv;
 
 // UI Colors
 
-color darkblue = color(26,26,30);
-color white = color(255,255,255);
-color col1 = color(255,33,81);
-color col2 = color(27,198,180);
+color darkblue = color(26, 26, 30);
+color white = color(255, 255, 255);
+color col1 = color(255, 33, 81);
+color col2 = color(27, 198, 180);
 
 // UI
 import controlP5.*;
 ControlP5 cp5;
+ControlP5 remapControl;
+
+
 Textlabel coordX;
 Textlabel coordY;
 Textlabel motor1Pos;
 Textlabel motor2Pos;
 Slider abc;
+
+
 
 PrintWriter backupFile;
 
@@ -40,11 +45,11 @@ boolean mouseLocked = false;
 int cornerSize = 10;
 
 ArrayList<Motor> motors = new ArrayList<Motor>();
-Motor mTemp;
 
 FloatList samples;
 boolean sampling;
-// Communication 
+
+// Communication
 import processing.serial.*;
 
 // Websocket
@@ -80,6 +85,11 @@ Marker marker;
 ArrayList<PVector> transformPoints = new ArrayList<PVector>();
 ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
 
+Motor Motor1;
+Motor Motor2;
+
+Motor mTemp;
+
 PVector imageTransformDelta;
 
 float[] motorPositions = new float[2];
@@ -95,6 +105,7 @@ int state = 0;
 String wsAdress = "ws://127.0.0.1";
 int wsPort = 8080;
 //String mqttAdress = "mqtt://192.168.2.101";
+//String mqttAdress = "mqtt://127.0.0.1";
 String mqttAdress = "mqtt://127.0.0.1";
 int mqttPort = 1883;
 
@@ -103,9 +114,16 @@ String requestChannel = "rq";
 
 // UI
 
-boolean drawVideo = true;
+boolean drawVideo = false;
 
 int gridWidth = 20;
+
+int borderY = 340;
+
+int barHeight = 15;
+int barWidth = 580;
+
+int caseByte = 0;
 
 // ====================================================================================================
 
@@ -113,32 +131,34 @@ void setup() {
 
   size(1920, 1080);
   background(darkblue);
-  p = createFont("Roboto Mono 700", fontSize); 
+  p = createFont("Roboto Mono 700", fontSize);
   pb = createFont("Roboto Mono", fontSize);
-  
-  
-  try {
-  cam = new Capture(this, 960, 540, "USB 2.0 Camera", 30);
-  if (cam == null) {
-    cam = new Capture(this, 640, 480);
-  }
-  cam.start();
-  }
-  catch(NullPointerException e){
-    println("No camera attached - falling back to built-in.");
-    cam = new Capture(this, 640,480);
-    cam.start();
-  }
-  
+
+  cp5 = new ControlP5(this);
+  createInterface();
+
+  Motor1 = new Motor(0, this);
+  Motor2 = new Motor(1, this);
+
+  motors.add(Motor1);
+  motors.add(Motor2);
+
+  // Start camera interface
+
+
+  setupCamera("USB 2.0 Camera");
+
   setupMQTT();
 
   //canvasSize = cam.height;
-  canvasSize = 836;
 
+  canvasSize = 836;
   imageTransformDelta = new PVector(122, 122);
 
   opencv = new OpenCV(this, cam);
   img = new PImage(canvasSize/2, canvasSize/2);
+
+  // Start computer vision stuff
 
   theBlobDetection = new BlobDetection(img.width, img.height);
   theBlobDetection.setPosDiscrimination(true);
@@ -154,56 +174,32 @@ void setup() {
   }
 
   marker = new Marker(0.5, 0.5, canvasSize, canvasSize);
-  marker.addLabel(coordX, coordY);
-  while(millis() < 5000){
-  }
-  cp5 = new ControlP5(this);
-  createInterface();
+
+
+
 }
 
 // ====================================================================================================
 
 void draw()
-{  
+{
   background(darkblue);
-  checkFrames();
-  updateInterface();
+
+
+  switch(caseByte){
+    case 0:{
+      checkFrames();
+      interfaceRegular();
+      displayWarped();
+      break;
+    }
+    case 1:{
+      interfaceRemap();
+      break;
+    }
+  }
+
   //displayCamera();
-  displayWarped();
-  drawCorners(122,122,836,836,18);
-}
 
-// ====================================================================================================
 
-void startSampling() {
-  if (motors.size() > 0) {
-    println("Starting sampling procedure..."); 
-    backupFile = createWriter(getDateString() + "_data.csv");
-    sampleState = 1;
-    lastSample = millis();
-    for (Motor m : motors) {
-      m.samples = new FloatList();
-    }
-  }
-  println("No motors attached ... =(");
-}
-
-void stopSampling(){
-  if(sampling){
-    println("Stopping sampling procedure...");
-    println("Writing to file.");
-    sampleState = 0;
-    sampling = false;
-    backupFile.flush();
-    backupFile.close();
-  }
-}
-
-void sample() {
-  if (sampling) {
-    for (Motor m : motors) {
-      m.samplePos();
-    }
-    lastSample = millis();
-  }
 }

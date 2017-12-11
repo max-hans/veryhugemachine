@@ -1,4 +1,3 @@
 
-void sendPos(Serial s, float newPos){
-  
+void sendPos(Serial s, float newPos) {
 }

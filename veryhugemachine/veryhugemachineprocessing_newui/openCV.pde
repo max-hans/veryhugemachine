@@ -1,8 +1,7 @@
 
-void warpImg(PImage targetImg, int warpSize, ArrayList<PVector> warpPoints){
-  
+void warpImg(PImage targetImg, int warpSize, ArrayList<PVector> warpPoints) {
+
   opencv.toPImage(warpPerspective(warpPoints, warpSize, warpSize), targetImg);
-  
 }
 
 

@@ -6,84 +6,103 @@ class Motor {
 
   private int motorState = 0;
   // 0 = waiting / 1 = calibrating / 2 = running
-  
+
   private int motorSpeed = 5000;
-  
+
   Textlabel motorIDLabel;
   //Textlabel motorPosLabel;
   Textlabel motorStateLabel;
   Bang resetButton;
   ControlListener cL;
-  
-  Slider motorSpeedSlider,motorPosSlider;
-  
+
+  Slider motorSpeedSlider, motorPosSlider, motorTargetSlider, motorStateSlider;
+
   // parameters to be sent
 
   public int id;
-  
+
   String idString;
-  
+
   MQTTClient client;
+
   //PApplet sketch;
-  
+
   Motor(int _id, PApplet _sketch) {
-    
+
     //sketch = _sketch;
     id = _id;
-    idString = nf(id,3);
+    idString = nf(id, 3);
     setupMQTT(_sketch);
-    
-    int index = motors.size();
-    
-    motorIDLabel = cp5.addTextlabel("motorid" + id)
-    .setText("motor ID: " + id)
-    .setPosition(gridWidth, 4*gridWidth + cam.height + index*gridWidth)
-    .setColorValue(255)
-    .setFont(pb)
-    ;
 
-    motorStateLabel = cp5.addTextlabel("motorstate" + id)
-    .setText(getMotorStateString())
-    .setPosition(gridWidth + gridX, 4*gridWidth + cam.height + index*gridWidth)
-    .setColorValue(255)
-    .setFont(p)
-    ;
-    
-    resetButton = cp5.addBang("motorReset"+id)
-    .setPosition(gridWidth + gridX*1.5, 4*gridWidth + cam.height + index*gridWidth + fontSize/2)
-    .setSize(gridX/2, 5)
-    .setLabel("reset")
-    .setLabelVisible(false)
-    .plugTo( this, "recalibrate" )
-    .setSize(gridWidth,5);
-    ;
-    
+    int offsetY =  buttonOffsetY + 2 * gridY + (5 * gridY * id);
+
+    println(id);
+
+    motorIDLabel = cp5.addTextlabel("motorid: " + id)
+      .setText("MOTOR ID " + id)
+      .setPosition(leftBorderUI, offsetY + gridY)
+      .setColorValue(255)
+      .setFont(p)
+      ;
+
     motorPosSlider = cp5.addSlider("motorpos" + id)
-    .setPosition(gridWidth + gridX*2, 4*gridWidth + cam.height + index*gridWidth + fontSize/2)
-    .setColorValue(255)
-    .setLabelVisible(false)
-    .setLabel("motorpos")
-    .setFont(p)
-    .setSize(gridX,5)
-    
-    .setRange(0,1)
-    .setValue(0)
-    ;
-    
+      .setPosition(leftBorderUI, offsetY + gridY * 2)
+      .setColorValue(255)
+      //.setLabelVisible(false)
+      .setLabel("motorpos")
+      .setFont(p)
+      .setSize(barWidth, barHeight)
+      .setRange(0.0, 1.0)
+      .setValue(0)
+      .setNumberOfTickMarks(5)
+      .snapToTickMarks(false)
+      .lock()
+      ;
+
+    motorTargetSlider = cp5.addSlider("motortarget" + id)
+      .setPosition(leftBorderUI, offsetY + gridY * 3)
+      .setColorValue(255)
+      //.setLabelVisible(false)
+      .setLabel("motortarget")
+      .setFont(p)
+      .setSize(barWidth, barHeight)
+      .setRange(0, 1)
+      .setValue(0)
+      .setNumberOfTickMarks(5)
+      .snapToTickMarks(false)
+      .setHandleSize(5)
+      .plugTo(this, "setTarget")
+      ;
+
     motorSpeedSlider = cp5.addSlider("motorspeed" + id)
-    .setPosition(gridWidth + gridX*3.5, 4*gridWidth + cam.height + index*gridWidth + fontSize/2)
-    .setColorValue(255)
-    .setLabelVisible(false)
-    .setLabel("motorspeed")
-    .setFont(p)
-    .setSize(gridX,5)
-    
-    .setRange(0.0,10000.0)
-    .setValue(4000)
-    ;
-    
-    
+      .setPosition(leftBorderUI, offsetY + gridY * 4)
+      .setColorValue(255)
+      //.setLabelVisible(false)
+      .setLabel("motorspeed")
+      .setFont(p)
+      .setSize(barWidth, barHeight)
+      .setRange(0.0, 10000.0)
+      .setValue(4000)
+      .setNumberOfTickMarks(5)
+      .snapToTickMarks(false)
+      .plugTo(this, "setSpeed")
+      ;
+
+    motorStateSlider = cp5.addSlider("motorstate" + id)
+      .setPosition(leftBorderUI, offsetY + gridY * 5)
+      .setColorValue(255)
+      //.setLabelVisible(false)
+      .setLabel("motorstate")
+      .setFont(p)
+      .setSize(barWidth, barHeight)
+      .setRange(0,2)
+      .setValue(getMotorState())
+      .lock()
+      .setNumberOfTickMarks(3)
+      .snapToTickMarks(false)
+      ;
   }
+
 
   void setupMQTT(PApplet p) {
     client = new MQTTClient(p);
@@ -93,13 +112,14 @@ class Motor {
   }
 
   // MQTT commands
-  // for higher precision all position values (target & pos) are scaled by 1000!!!
+  // for higher precision all position values (target & pos) are scaled by 1000
+
   public void setTarget(float inVal) {
     motorTarget = inVal;
     client.publish('/' + idString + "/tgt", str(inVal*1000));
     println("motorID " + id + ": setting new position: " + motorTarget);
   }
-  
+
   public void setSpeed(float speed) {
     int inSpeed = int(speed);
     motorSpeed = inSpeed;
@@ -112,24 +132,26 @@ class Motor {
     println('/' + idString + "/rst");
     println("motorID " + id + ": starting calibration procedure!");
   }
-  
-  public void updateInfo(){
-    String posT = nf(motorPos,1,5);
+
+  public void updateInfo() {
+    String posT = nf(motorPos, 1, 5);
     motorPosLabel.setText("X: [" + posT + "]");
   }
 
   // MQTT handling
 
-  void messageReceived(String topic, byte[] payload) {
+  private void messageReceived(String topic, byte[] payload) {
     println("new message: " + topic + " - " + new String(payload));
     String msg = new String(payload);
-    String[] topicList = split(topic,'/');
-    switch(topicList[1]){
-      case "pos":{
+    String[] topicList = split(topic, '/');
+    switch(topicList[1]) {
+    case "pos":
+      {
         motorPos = float(msg)/1000;
         break;
       }
-      case "state":{
+    case "state":
+      {
         motorState = int(msg);
         break;
       }
@@ -138,15 +160,18 @@ class Motor {
 
   // public
 
-  public String getMotorStateString(){
-    switch (motorState){
-      case 1:{
+  public String getMotorStateString() {
+    switch (motorState) {
+    case 1:
+      {
         return "calibrating";
       }
-      case 2:{
+    case 2:
+      {
         return "running";
       }
-      default:{
+    default:
+      {
         return "waiting";
       }
     }
@@ -159,16 +184,16 @@ class Motor {
   public void setNewSpeed(int inSpeed) {
     motorSpeed = inSpeed;
   }
-  
-  public float getMotorPos(){
+
+  public float getMotorPos() {
     return motorPos;
   }
-  
-  public int getMotorState(){
+
+  public int getMotorState() {
     return motorState;
   }
-  
-  public void samplePos(){
+
+  public void samplePos() {
     this.samples.append(this.motorPos);
   }
 

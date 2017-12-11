@@ -8,7 +8,7 @@ class DragPoint {
 
   public void display() {
     setLineStyle();
-    drawMarker(this.pos.x, this.pos.y,50);
+    drawMarker(this.pos.x, this.pos.y, 50);
   }
 
   public void update() {
@@ -47,14 +47,14 @@ void drawMarker(float _x, float _y, int dia) {
   stroke(white);
   fill(darkblue);
   strokeWeight(1);
-  
+
   pushMatrix();
   translate(_x, _y);
-  
-  line(0,-dia/2,0,dia/2);
-  line(-dia/2,0,dia/2,0);
-  rect(-10,-10,20,20);
-  drawCross(0,0);
+
+  line(0, -dia/2, 0, dia/2);
+  line(-dia/2, 0, dia/2, 0);
+  rect(-10, -10, 20, 20);
+  drawCross(0, 0);
 
   popMatrix();
 }
@@ -67,7 +67,6 @@ void drawMarker(float _x, float _y, int dia, int ellipseOff, int lineOff) {
   line(0, -lineOff, 0, -dia/2);
   line(lineOff, 0, dia/2, 0);
   line(-lineOff, 0, -dia/2, 0);
-
 
   ellipse(0, 0, dia+ellipseOff, dia+ellipseOff);
   popMatrix();
@@ -84,21 +83,21 @@ void drawMarker(float _x, float _y, int dia, int lineOff) {
   popMatrix();
 }
 
-void drawNode(float x, float y,int s){
+void drawNode(float x, float y, int s) {
   stroke(white);
   strokeWeight(255);
   fill(col2);
-  rect(x-s/2,y-s/2,s,s);
+  rect(x-s/2, y-s/2, s, s);
 }
 
 void drawFrame() {
   setFillStyle();
   beginShape();
-  vertex(0,0);
-  vertex(cam.width,0);
+  vertex(0, 0);
+  vertex(cam.width, 0);
   vertex(cam.width, cam.height);
-  vertex(0,cam.height);
-  
+  vertex(0, cam.height);
+
   beginContour();
   for (DragPoint dP : dragPoints) {
 
@@ -153,42 +152,22 @@ void setFillStyle() {
   fill(255, 50);
 }
 
-void drawCrossHair(PVector targetN, int frameWidth, int frameHeight, int offset){
+void drawCrossHair(PVector targetN, int frameWidth, int frameHeight, int offset) {
   setLineStyle();
   float targetX = targetN.x * frameWidth;
   float targetY = targetN.y * frameHeight;
-  
-  line(targetX,0,targetX,targetY-offset);
-  line(targetX,targetY + offset,targetX,frameHeight);
-  
-  line(0,targetY,targetX-offset,targetY);
-  line(targetX + offset,targetY,frameWidth,targetY);
-  
+
+  line(targetX, 0, targetX, targetY-offset);
+  line(targetX, targetY + offset, targetX, frameHeight);
+
+  line(0, targetY, targetX-offset, targetY);
+  line(targetX + offset, targetY, frameWidth, targetY);
 }
 
 
-void displayCamera(){
-  // Display camera image
-  pushMatrix();
-  translate(imageTransformDelta.x, imageTransformDelta.y);
 
-  imageMode(CORNER);
-  image(cam, 0, 0);
 
-  drawCorners(0, 0, cam.width, cam.height, cornerSize);
-  
-  // Display Markers on camera image
-  
-  for (DragPoint dP : dragPoints) {
-    dP.update();
-    dP.display();
-  }
-  
-  drawFrame();
-  popMatrix();
-}
-
-void displayWarped(){
+void displayWarped() {
   // Display warped image
   pushMatrix();
   translate(imageTransformDelta.x, imageTransformDelta.y);
@@ -206,7 +185,7 @@ void displayWarped(){
   popMatrix();
 }
 
-void checkFrames(){
+void checkFrames() {
   if (newFrame)
   {
     newFrame=false;
@@ -230,7 +209,6 @@ void checkFrames(){
       }
     }
     marker.updatePos(getMarkerPosition());
-    updateMarkerPos();
   }
 }
 
@@ -256,35 +234,44 @@ void keyPressed() {
   //if (key == 'l')activateLearning();
 }
 
-void drawCross(float x, float y){
+void drawCross(float x, float y) {
   stroke(white);
   strokeWeight(1);
-  line(x-2,y-2,x+2,y+2);
-  line(x-2,y+2,x+2,y-2);
+  line(x-2, y-2, x+2, y+2);
+  line(x-2, y+2, x+2, y-2);
 }
 
-void drawCorners(float x, float y, float w, float h, float s){
+void drawCorners(float x, float y, float w, float h, float s) {
   beginShape();
-  vertex(x,y-s);
-  vertex(x,y);
-  vertex(x-s,y);
+  vertex(x, y-s);
+  vertex(x, y);
+  vertex(x-s, y);
   endShape();
-  
+
   beginShape();
-  vertex(x+w,y-s);
-  vertex(x+w,y);
-  vertex(x+w+s,y);
+  vertex(x+w, y-s);
+  vertex(x+w, y);
+  vertex(x+w+s, y);
   endShape();
-  
+
   beginShape();
-  vertex(x+w+s,y+h);
-  vertex(x+w,y+h);
-  vertex(x+w,y+h+s);
+  vertex(x+w+s, y+h);
+  vertex(x+w, y+h);
+  vertex(x+w, y+h+s);
   endShape();
-  
+
   beginShape();
-  vertex(x,y+h+s);
-  vertex(x,y+h);
-  vertex(x-s,y+h);
+  vertex(x, y+h+s);
+  vertex(x, y+h);
+  vertex(x-s, y+h);
   endShape();
-} 
+}
+
+void drawGrid(float x, float y, float w, float h, float count) {
+  float delta = w / count;
+  for (float i = 1; i< count; i++) {
+    for ( float j = 1; j<count; j++) {
+      drawCross(x + (delta * i), y + (delta * j));
+    }
+  }
+}

@@ -10,33 +10,21 @@ class Motor {
   private int motorSpeed = 5000;
 
   Textlabel motorIDLabel;
-  //Textlabel motorPosLabel;
   Textlabel motorStateLabel;
-  Bang resetButton;
+
   ControlListener cL;
 
   Slider motorSpeedSlider, motorPosSlider, motorTargetSlider, motorStateSlider;
-
-  // parameters to be sent
 
   public int id;
 
   String idString;
 
-  MQTTClient client;
-
-  //PApplet sketch;
-
-  Motor(int _id, PApplet _sketch) {
-
-    //sketch = _sketch;
+  Motor(int _id) {
     id = _id;
     idString = nf(id, 3);
-    setupMQTT(_sketch);
 
     int offsetY =  buttonOffsetY + 2 * gridY + (5 * gridY * id);
-
-    println(id);
 
     motorIDLabel = cp5.addTextlabel("motorid: " + id)
       .setText("MOTOR ID " + id)
@@ -48,7 +36,6 @@ class Motor {
     motorPosSlider = cp5.addSlider("motorpos" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 2)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motorpos")
       .setFont(p)
       .setSize(barWidth, barHeight)
@@ -56,13 +43,14 @@ class Motor {
       .setValue(0)
       .setNumberOfTickMarks(5)
       .snapToTickMarks(false)
+      .plugTo(this, "motorPos")
+      .setDecimalPrecision(5)
       .lock()
       ;
 
     motorTargetSlider = cp5.addSlider("motortarget" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 3)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motortarget")
       .setFont(p)
       .setSize(barWidth, barHeight)
@@ -77,7 +65,6 @@ class Motor {
     motorSpeedSlider = cp5.addSlider("motorspeed" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 4)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motorspeed")
       .setFont(p)
       .setSize(barWidth, barHeight)
@@ -91,28 +78,17 @@ class Motor {
     motorStateSlider = cp5.addSlider("motorstate" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 5)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motorstate")
       .setFont(p)
       .setSize(barWidth, barHeight)
-      .setRange(0,2)
+      .setRange(0, 2)
       .setValue(getMotorState())
       .lock()
       .setNumberOfTickMarks(3)
       .snapToTickMarks(false)
+      .plugTo(this, "motorState")
       ;
   }
-
-
-  void setupMQTT(PApplet p) {
-    client = new MQTTClient(p);
-    client.connect(mqttAdress + ':' + mqttPort, str(id));
-    client.subscribe('/' + idString + '/');
-    println("motorID " + id + ": setup complete");
-  }
-
-  // MQTT commands
-  // for higher precision all position values (target & pos) are scaled by 1000
 
   public void setTarget(float inVal) {
     motorTarget = inVal;
@@ -138,27 +114,17 @@ class Motor {
     motorPosLabel.setText("X: [" + posT + "]");
   }
 
-  // MQTT handling
-
-  private void messageReceived(String topic, byte[] payload) {
-    println("new message: " + topic + " - " + new String(payload));
-    String msg = new String(payload);
-    String[] topicList = split(topic, '/');
-    switch(topicList[1]) {
-    case "pos":
-      {
-        motorPos = float(msg)/1000;
-        break;
-      }
-    case "state":
-      {
-        motorState = int(msg);
-        break;
-      }
+  public void processCmd(String cmd, String payload) {
+    if (cmd.equals("pos")) {
+      motorPos = float(payload)/1000;
+      this.motorPosSlider.setValue(motorPos);
+      println("setting new pos: " + motorPos);
+    } else if (cmd.equals("state")) {
+      motorState = int(payload);
+      this.motorPosSlider.setValue(motorState);
+      println("setting new state: " + motorState);
     }
   }
-
-  // public
 
   public String getMotorStateString() {
     switch (motorState) {
@@ -197,5 +163,16 @@ class Motor {
     this.samples.append(this.motorPos);
   }
 
-  // private
+  public void updatePos(float val) {
+    motorPos = val/1000.0;
+    motorPosSlider.setValue(motorPos);
+    println("Motor" + id + " - new position: " + motorPos); 
+  }
+
+  public void updateState(int val) {
+    motorState = val;
+    motorStateSlider.setValue(motorState);
+    println("Motor" + id + " - new state: " + motorState);
+  }
+
 }

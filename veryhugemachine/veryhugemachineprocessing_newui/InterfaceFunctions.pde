@@ -26,7 +26,6 @@ void remap(){
   }
   else{
     caseByte = 0;
-
   }
 }
 
@@ -51,18 +50,15 @@ void load(){
 }
 
 // row 3
-
-void newsketch(){
-
+void startSketch(){
+  switchDraw();
 }
 
-void delsketch(){
-
+void delSketch(){
+  deleteDraw();
 }
 
-void startDraw(){
 
-}
 
 void start(){
 

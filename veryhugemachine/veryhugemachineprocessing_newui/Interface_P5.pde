@@ -1,6 +1,6 @@
 int uiDeltaY = 60;
 
-int fontSize = 10;
+int fontSize = 12;
 
 ListBox motorList;
 
@@ -110,31 +110,34 @@ void createInterface() {
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("newsketch")
-    .setPosition(leftBorderUI + buttonGridX * 0, buttonOffsetY + gridY * 2)
-    .setColorValue(255)
-    .setLabel("newsketch")
-    .setFont(p)
-    .setSize(buttonWidth, buttonHeight)
-    ;
+// row 3
 
-  cp5.addBang("delsketch")
+cp5.addBang("startSketch")
+  .setPosition(leftBorderUI + buttonGridX * 0, buttonOffsetY + gridY * 2)
+  .setColorValue(255)
+  .setLabel("startSketch")
+  .setFont(p)
+  .setSize(buttonWidth, buttonHeight)
+  ;
+
+  cp5.addBang("delSketch")
     .setPosition(leftBorderUI + buttonGridX * 1, buttonOffsetY + gridY * 2)
     .setColorValue(255)
-    .setLabel("delsketch")
+    .setLabel("del sketch")
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("draw")
+
+  cp5.addBang("startDraw")
     .setPosition(leftBorderUI + buttonGridX * 2, buttonOffsetY + gridY * 2)
     .setColorValue(255)
-    .setLabel("draw")
+    .setLabel("start")
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("start")
+  cp5.addBang("stopDraw")
     .setPosition(leftBorderUI + buttonGridX * 3, buttonOffsetY + gridY * 2)
     .setColorValue(255)
     .setLabel("start")
@@ -156,18 +159,6 @@ public void controlEvent(ControlEvent theEvent) {
   }
 }
 
-void motorReset() {
-  mTemp.recalibrate();
-}
-
-void motorTarget(float val) {
-  mTemp.setTarget(val/1000);
-}
-
-void motorSpeed(float val) {
-  int inVal = int(val);
-  mTemp.setSpeed(inVal);
-}
 
 // Interface stuff
 
@@ -185,9 +176,7 @@ void toggleVideo() {
 //   coordY.setText("Y: [" + yT + "]");
 // }
 
-void updateMotorData() {
-  motorPosLabel.setText("Coord X: [" + mTemp.motorPos + "]");
-}
+
 /*
 void updateMotorPos() {
  motor1Pos.setText("Motor1: [" + motor1.motorPosScaled + "]");

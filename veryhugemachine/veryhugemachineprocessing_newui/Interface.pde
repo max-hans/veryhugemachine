@@ -221,6 +221,12 @@ void mousePressed() {
   }
 }
 
+void mouseClicked(){
+  if(isDrawing){
+    checkVertex(mouseX, mouseY);
+  }
+}
+
 void mouseReleased() {
   for (DragPoint DP : dragPoints) {
     DP.isDragged = false;

@@ -28,7 +28,8 @@ Textlabel motor1Pos;
 Textlabel motor2Pos;
 Slider abc;
 
-
+int canvasOffset = 122;
+int canvasSize = 836;
 
 PrintWriter backupFile;
 
@@ -44,7 +45,11 @@ int dragThresh = 10;
 boolean mouseLocked = false;
 int cornerSize = 10;
 
-ArrayList<Motor> motors = new ArrayList<Motor>();
+
+Motor Motor0, Motor1;
+ArrayList<Motor> motors;
+
+Motor[] motorArray = new Motor[2];
 
 FloatList samples;
 boolean sampling;
@@ -62,6 +67,7 @@ MQTTClient client;
 
 PFont p; // regular font
 PFont pb; // bold font
+
 // Tracking
 import processing.video.*;
 Capture cam;
@@ -71,8 +77,6 @@ import blobDetection.*;
 BlobDetection theBlobDetection;
 float blobThreshDelta = 0.001f;
 float detectionThreshold = 0.3f;
-
-int canvasSize;
 
 PImage img;
 PImage warpedCanvas;
@@ -84,11 +88,6 @@ Marker marker;
 
 ArrayList<PVector> transformPoints = new ArrayList<PVector>();
 ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
-
-Motor Motor1;
-Motor Motor2;
-
-Motor mTemp;
 
 PVector imageTransformDelta;
 
@@ -105,17 +104,17 @@ int state = 0;
 String wsAdress = "ws://127.0.0.1";
 int wsPort = 8080;
 //String mqttAdress = "mqtt://192.168.2.101";
-//String mqttAdress = "mqtt://127.0.0.1";
 String mqttAdress = "mqtt://127.0.0.1";
 int mqttPort = 1883;
 
 String trackingChannel = "track";
 String requestChannel = "rq";
 
-// UI
+ArrayList<PVector> shapePoints;
+
+// UI constants
 
 boolean drawVideo = false;
-
 int gridWidth = 20;
 
 int borderY = 340;
@@ -124,7 +123,7 @@ int barHeight = 15;
 int barWidth = 580;
 
 int caseByte = 0;
-
+boolean motorsOnline = true;
 // ====================================================================================================
 
 void setup() {
@@ -135,24 +134,37 @@ void setup() {
   pb = createFont("Roboto Mono", fontSize);
 
   cp5 = new ControlP5(this);
+  setupCamera("USB 2.0 Camera");
+
+  motors = new ArrayList<Motor>();
+
+  setupMQTTglobal();
+
   createInterface();
+  shapePoints = new ArrayList<PVector>();
 
-  Motor1 = new Motor(0, this);
-  Motor2 = new Motor(1, this);
+  
 
+  Motor0 = new Motor(0);
+  Motor1 = new Motor(1);
+/*
+  motors.add(Motor0);
   motors.add(Motor1);
-  motors.add(Motor2);
+  */
+  motorArray[0] = new Motor(0);
+  motorArray[1] = new Motor(1);
+
+  motorsOnline = true;
+
+  //print(motors);
+  printArray(motorArray);
 
   // Start camera interface
 
 
-  setupCamera("USB 2.0 Camera");
-
-  setupMQTT();
-
   //canvasSize = cam.height;
 
-  canvasSize = 836;
+
   imageTransformDelta = new PVector(122, 122);
 
   opencv = new OpenCV(this, cam);
@@ -174,9 +186,6 @@ void setup() {
   }
 
   marker = new Marker(0.5, 0.5, canvasSize, canvasSize);
-
-
-
 }
 
 // ====================================================================================================
@@ -186,20 +195,20 @@ void draw()
   background(darkblue);
 
 
-  switch(caseByte){
-    case 0:{
+  switch(caseByte) {
+  case 0:
+    {
       checkFrames();
       interfaceRegular();
       displayWarped();
       break;
     }
-    case 1:{
+  case 1:
+    {
       interfaceRemap();
       break;
     }
   }
 
   //displayCamera();
-
-
 }

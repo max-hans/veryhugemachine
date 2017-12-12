@@ -58,7 +58,8 @@ Textlabel motor1Pos;
 Textlabel motor2Pos;
 Slider abc;
 
-
+int canvasOffset = 122;
+int canvasSize = 836;
 
 PrintWriter backupFile;
 
@@ -74,7 +75,9 @@ int dragThresh = 10;
 boolean mouseLocked = false;
 int cornerSize = 10;
 
-ArrayList<Motor> motors = new ArrayList<Motor>();
+ArrayList<Motor> motors;
+Motor Motor1;
+Motor Motor2;
 
 FloatList samples;
 boolean sampling;
@@ -92,6 +95,7 @@ MQTTClient client;
 
 PFont p; // regular font
 PFont pb; // bold font
+
 // Tracking
 
 Capture cam;
@@ -102,7 +106,7 @@ BlobDetection theBlobDetection;
 float blobThreshDelta = 0.001f;
 float detectionThreshold = 0.3f;
 
-int canvasSize;
+
 
 PImage img;
 PImage warpedCanvas;
@@ -115,8 +119,7 @@ Marker marker;
 ArrayList<PVector> transformPoints = new ArrayList<PVector>();
 ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
 
-Motor Motor1;
-Motor Motor2;
+
 
 Motor mTemp;
 
@@ -135,17 +138,17 @@ int state = 0;
 String wsAdress = "ws://127.0.0.1";
 int wsPort = 8080;
 //String mqttAdress = "mqtt://192.168.2.101";
-//String mqttAdress = "mqtt://127.0.0.1";
 String mqttAdress = "mqtt://127.0.0.1";
 int mqttPort = 1883;
 
 String trackingChannel = "track";
 String requestChannel = "rq";
 
-// UI
+ArrayList<PVector> shapePoints;
+
+// UI constants
 
 boolean drawVideo = false;
-
 int gridWidth = 20;
 
 int borderY = 340;
@@ -154,7 +157,7 @@ int barHeight = 15;
 int barWidth = 580;
 
 int caseByte = 0;
-
+boolean motorsOnline = true;
 // ====================================================================================================
 
 public void setup() {
@@ -165,24 +168,29 @@ public void setup() {
   pb = createFont("Roboto Mono", fontSize);
 
   cp5 = new ControlP5(this);
+  setupCamera("USB 2.0 Camera");
+  setupMQTTglobal();
+
   createInterface();
+  shapePoints = new ArrayList<PVector>();
 
   Motor1 = new Motor(0, this);
   Motor2 = new Motor(1, this);
-
+  motors = new ArrayList<Motor>();
   motors.add(Motor1);
   motors.add(Motor2);
+
+  motorsOnline = true;
+
+  printArray(motors);
+
 
   // Start camera interface
 
 
-  setupCamera("USB 2.0 Camera");
-
-  setupMQTT();
-
   //canvasSize = cam.height;
 
-  canvasSize = 836;
+
   imageTransformDelta = new PVector(122, 122);
 
   opencv = new OpenCV(this, cam);
@@ -425,6 +433,59 @@ public void fastblur(PImage img, int radius)
     }
   }
 }
+
+
+
+
+boolean isDrawing = false;
+
+public void deleteDraw(){
+  shapePoints.clear();
+}
+
+public void checkVertex(float _x, float _y){
+  if(onCanvas(_x,_y)){
+    shapePoints.add(new PVector(map(_x,canvasOffset,canvasSize+canvasOffset,0.0f,1.0f),map(_y,canvasOffset,canvasSize+canvasOffset,0.0f,1.0f)));
+  }
+}
+
+public boolean onCanvas(float _x, float _y){
+  return(((_x > canvasOffset) && (_x < (canvasOffset + canvasSize))) && ((_y > canvasOffset) && (_y < (canvasOffset + canvasSize))));
+}
+
+public void showDrawing(){
+  if(!shapePoints.isEmpty()){
+    pushMatrix();
+    translate(canvasOffset,canvasOffset);
+
+    stroke(col2);
+    strokeWeight(5);
+
+    beginShape();
+    for(PVector P : shapePoints){
+      vertex(P.x*canvasSize,P.y*canvasSize);
+    }
+    endShape();
+    popMatrix();
+  }
+}
+
+public void switchDraw(){
+  if(isDrawing){
+    println("stopping drawing");
+    isDrawing = false;
+    }
+    else{
+      println("starting drawing");
+      isDrawing = true;
+    }
+}
+
+/*
+void startDrawing(){
+  shapePoints = new ArrayList<PVector>();
+}
+*/
 class DragPoint {
   int dia = 20;
   PVector pos;
@@ -648,6 +709,12 @@ public void mousePressed() {
   }
 }
 
+public void mouseClicked(){
+  if(isDrawing){
+    checkVertex(mouseX, mouseY);
+  }
+}
+
 public void mouseReleased() {
   for (DragPoint DP : dragPoints) {
     DP.isDragged = false;
@@ -730,7 +797,6 @@ public void remap(){
   }
   else{
     caseByte = 0;
-
   }
 }
 
@@ -755,25 +821,23 @@ public void load(){
 }
 
 // row 3
-
-public void newsketch(){
-
+public void startSketch(){
+  switchDraw();
 }
 
-public void delsketch(){
-
+public void delSketch(){
+  deleteDraw();
 }
 
-public void startDraw(){
 
-}
 
 public void start(){
 
 }
 public void interfaceRegular(){
-  drawCorners(122, 122, 836, 836, 18);
-  drawGrid(122, 122, 836, 836, 10);
+  drawCorners(canvasOffset, canvasOffset, canvasSize, canvasSize, 18);
+  drawGrid(canvasOffset, canvasOffset, canvasSize, canvasSize, 10);
+  showDrawing();
   cp5.draw();
 }
 public void interfaceRemap(){
@@ -803,7 +867,7 @@ public void displayCamera() {
 }
 int uiDeltaY = 60;
 
-int fontSize = 10;
+int fontSize = 12;
 
 ListBox motorList;
 
@@ -913,31 +977,34 @@ public void createInterface() {
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("newsketch")
-    .setPosition(leftBorderUI + buttonGridX * 0, buttonOffsetY + gridY * 2)
-    .setColorValue(255)
-    .setLabel("newsketch")
-    .setFont(p)
-    .setSize(buttonWidth, buttonHeight)
-    ;
+// row 3
 
-  cp5.addBang("delsketch")
+cp5.addBang("startSketch")
+  .setPosition(leftBorderUI + buttonGridX * 0, buttonOffsetY + gridY * 2)
+  .setColorValue(255)
+  .setLabel("startSketch")
+  .setFont(p)
+  .setSize(buttonWidth, buttonHeight)
+  ;
+
+  cp5.addBang("delSketch")
     .setPosition(leftBorderUI + buttonGridX * 1, buttonOffsetY + gridY * 2)
     .setColorValue(255)
-    .setLabel("delsketch")
+    .setLabel("del sketch")
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("draw")
+
+  cp5.addBang("startDraw")
     .setPosition(leftBorderUI + buttonGridX * 2, buttonOffsetY + gridY * 2)
     .setColorValue(255)
-    .setLabel("draw")
+    .setLabel("start")
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("start")
+  cp5.addBang("stopDraw")
     .setPosition(leftBorderUI + buttonGridX * 3, buttonOffsetY + gridY * 2)
     .setColorValue(255)
     .setLabel("start")
@@ -1033,33 +1100,36 @@ public void sample() {
 }
 // MQTT setup
 
-public void setupMQTT() {
+public void setupMQTTglobal() {
   client = new MQTTClient(this);
   client.connect(mqttAdress + ':' + mqttPort, "main");
   client.subscribe("/register");
+  client.subscribe("/+/pos");
+  client.subscribe("/+/state");
 }
 
 public void messageReceived(String topic, byte[] payload) {
   String msg = new String(payload);
   println("new message: " + topic + " - " + msg);
-  switch(topic) {
-  case "/register":
-    {
-      boolean known = false;
-      int inId = Integer.parseInt(msg);
-      println("incoming: " + inId);
-      for (Motor m : motors) {
-        if (m.id == inId) {
-          println("motor ID " + inId + " already registered!");
-          known = true;
-          break;
-        }
-      }
-      if (!known) {
-        println("adding new motor - ID: " + msg);
-        motors.add(new Motor(inId, this));
-      }
+
+  String[] topicList = split(topic, '/');
+  printArray(topicList);
+
+  if(!motors.isEmpty()){
+
+    int index = PApplet.parseInt(topicList[1]);
+    mTemp = motors.get(index);
+
+    if(topicList[2].equals("pos")){
+      mTemp.updatePos(PApplet.parseFloat(msg) / 1000.0f);
     }
+    else if(topicList[2].equals("state")){
+      mTemp.updateState(PApplet.parseInt(msg));
+    }
+  }
+
+  else{
+    println("motors not online yet");
   }
 }
 
@@ -1154,9 +1224,8 @@ class Motor {
   private int motorSpeed = 5000;
 
   Textlabel motorIDLabel;
-  //Textlabel motorPosLabel;
   Textlabel motorStateLabel;
-  Bang resetButton;
+
   ControlListener cL;
 
   Slider motorSpeedSlider, motorPosSlider, motorTargetSlider, motorStateSlider;
@@ -1167,8 +1236,6 @@ class Motor {
 
   String idString;
 
-  MQTTClient client;
-
   //PApplet sketch;
 
   Motor(int _id, PApplet _sketch) {
@@ -1176,11 +1243,11 @@ class Motor {
     //sketch = _sketch;
     id = _id;
     idString = nf(id, 3);
-    setupMQTT(_sketch);
+    //setupMQTT(_sketch);
 
     int offsetY =  buttonOffsetY + 2 * gridY + (5 * gridY * id);
 
-    println(id);
+    //println(id);
 
     motorIDLabel = cp5.addTextlabel("motorid: " + id)
       .setText("MOTOR ID " + id)
@@ -1200,7 +1267,8 @@ class Motor {
       .setValue(0)
       .setNumberOfTickMarks(5)
       .snapToTickMarks(false)
-      .lock()
+      .plugTo(this, "motorPos")
+      //.lock()
       ;
 
     motorTargetSlider = cp5.addSlider("motortarget" + id)
@@ -1241,20 +1309,22 @@ class Motor {
       .setSize(barWidth, barHeight)
       .setRange(0,2)
       .setValue(getMotorState())
-      .lock()
+      //.lock()
       .setNumberOfTickMarks(3)
       .snapToTickMarks(false)
+      .plugTo(this, "motorState")
       ;
   }
 
+/*
+  void setupMQTT(PApplet p) {
+    motorClient = new MQTTClient(p);
+    motorClient.connect(mqttAdress + ':' + mqttPort, str(id));
+    println(motorClient);
 
-  public void setupMQTT(PApplet p) {
-    client = new MQTTClient(p);
-    client.connect(mqttAdress + ':' + mqttPort, str(id));
-    client.subscribe('/' + idString + '/');
     println("motorID " + id + ": setup complete");
   }
-
+*/
   // MQTT commands
   // for higher precision all position values (target & pos) are scaled by 1000
 
@@ -1284,22 +1354,30 @@ class Motor {
 
   // MQTT handling
 
-  private void messageReceived(String topic, byte[] payload) {
+  /*public void messageReceived(String topic, byte[] payload) {
+    println(id + ": ");
     println("new message: " + topic + " - " + new String(payload));
     String msg = new String(payload);
     String[] topicList = split(topic, '/');
-    switch(topicList[1]) {
-    case "pos":
-      {
-        motorPos = PApplet.parseFloat(msg)/1000;
-        break;
+    printArray(topicList);
+
+  }
+  */
+
+  public void processCmd(String cmd, String payload){
+    /*if(cmd.equals("pos")){
+        motorPos = float(payload)/1000;
+        this.motorPosSlider.setValue(motorPos);
+        println("setting new pos: " + motorPos);
+
       }
-    case "state":
-      {
-        motorState = PApplet.parseInt(msg);
-        break;
+      else if(cmd.equals("state")){
+        motorState = int(payload);
+        this.motorPosSlider.setValue(motorState);
+        println("setting new state: " + motorState);
+
       }
-    }
+      */
   }
 
   // public
@@ -1339,6 +1417,14 @@ class Motor {
 
   public void samplePos() {
     this.samples.append(this.motorPos);
+  }
+
+  public void updatePos(float val){
+    motorPos = val;
+  }
+
+  public void updateState(int val){
+    motorState = val;
   }
 
   // private

@@ -1,42 +1,41 @@
 // MQTT setup
 
-void setupMQTT() {
+void setupMQTTglobal() {
   client = new MQTTClient(this);
   client.connect(mqttAdress + ':' + mqttPort, "main");
   client.subscribe("/register");
+  client.subscribe("/+/pos");
+  client.subscribe("/+/state");
 }
 
 void messageReceived(String topic, byte[] payload) {
+
   String msg = new String(payload);
   println("new message: " + topic + " - " + msg);
-  switch(topic) {
-  case "/register":
-    {
-      boolean known = false;
-      int inId = Integer.parseInt(msg);
-      println("incoming: " + inId);
-      for (Motor m : motors) {
-        if (m.id == inId) {
-          println("motor ID " + inId + " already registered!");
-          known = true;
-          break;
-        }
-      }
-      if (!known) {
-        println("adding new motor - ID: " + msg);
-        motors.add(new Motor(inId, this));
-      }
+
+  String[] topicList = split(topic, '/');
+  //print(motors.size());
+  if ((motorArray[0] == null) && (motorArray[1] == null)) {
+    println("motors not online yet");
+  } else {
+    int index = int(topicList[1]);
+    //Motor mTemp = motorArray[index];
+    
+    if (topicList[2].equals("pos")) {
+      motorArray[index].updatePos(float(msg));
+    } else if (topicList[2].equals("state")) {
+      motorArray[index].updateState(int(msg));
     }
   }
 }
-
+/*
 void setActiveMotor(int id) {
   mTemp = motors.get(id);
   motorPos.setValue(mTemp.motorPos);
   motorTgt.setValue(mTemp.motorTarget);
   motorSpd.setValue(mTemp.motorSpeed);
 }
-
+*/
 void activateUi(boolean val) {
   motorPos.setLock(val).setColorForeground(fgi);
   motorTgt.setLock(val).setColorForeground(fgi);

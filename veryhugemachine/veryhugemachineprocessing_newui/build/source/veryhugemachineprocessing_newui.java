@@ -75,9 +75,11 @@ int dragThresh = 10;
 boolean mouseLocked = false;
 int cornerSize = 10;
 
+
+Motor Motor0, Motor1;
 ArrayList<Motor> motors;
-Motor Motor1;
-Motor Motor2;
+
+Motor[] motorArray = new Motor[2];
 
 FloatList samples;
 boolean sampling;
@@ -106,8 +108,6 @@ BlobDetection theBlobDetection;
 float blobThreshDelta = 0.001f;
 float detectionThreshold = 0.3f;
 
-
-
 PImage img;
 PImage warpedCanvas;
 
@@ -118,10 +118,6 @@ Marker marker;
 
 ArrayList<PVector> transformPoints = new ArrayList<PVector>();
 ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
-
-
-
-Motor mTemp;
 
 PVector imageTransformDelta;
 
@@ -169,21 +165,29 @@ public void setup() {
 
   cp5 = new ControlP5(this);
   setupCamera("USB 2.0 Camera");
+
+  motors = new ArrayList<Motor>();
+
   setupMQTTglobal();
 
   createInterface();
   shapePoints = new ArrayList<PVector>();
 
-  Motor1 = new Motor(0, this);
-  Motor2 = new Motor(1, this);
-  motors = new ArrayList<Motor>();
+  
+
+  Motor0 = new Motor(0);
+  Motor1 = new Motor(1);
+/*
+  motors.add(Motor0);
   motors.add(Motor1);
-  motors.add(Motor2);
+  */
+  motorArray[0] = new Motor(0);
+  motorArray[1] = new Motor(1);
 
   motorsOnline = true;
 
-  printArray(motors);
-
+  //print(motors);
+  printArray(motorArray);
 
   // Start camera interface
 
@@ -212,9 +216,6 @@ public void setup() {
   }
 
   marker = new Marker(0.5f, 0.5f, canvasSize, canvasSize);
-
-
-
 }
 
 // ====================================================================================================
@@ -224,22 +225,22 @@ public void draw()
   background(darkblue);
 
 
-  switch(caseByte){
-    case 0:{
+  switch(caseByte) {
+  case 0:
+    {
       checkFrames();
       interfaceRegular();
       displayWarped();
       break;
     }
-    case 1:{
+  case 1:
+    {
       interfaceRemap();
       break;
     }
   }
 
   //displayCamera();
-
-
 }
 public PVector getMarkerPosition() {
   Blob b;
@@ -1026,18 +1027,6 @@ public void controlEvent(ControlEvent theEvent) {
   }
 }
 
-public void motorReset() {
-  mTemp.recalibrate();
-}
-
-public void motorTarget(float val) {
-  mTemp.setTarget(val/1000);
-}
-
-public void motorSpeed(float val) {
-  int inVal = PApplet.parseInt(val);
-  mTemp.setSpeed(inVal);
-}
 
 // Interface stuff
 
@@ -1055,9 +1044,7 @@ public void toggleVideo() {
 //   coordY.setText("Y: [" + yT + "]");
 // }
 
-public void updateMotorData() {
-  motorPosLabel.setText("Coord X: [" + mTemp.motorPos + "]");
-}
+
 /*
 void updateMotorPos() {
  motor1Pos.setText("Motor1: [" + motor1.motorPosScaled + "]");
@@ -1109,37 +1096,33 @@ public void setupMQTTglobal() {
 }
 
 public void messageReceived(String topic, byte[] payload) {
+
   String msg = new String(payload);
   println("new message: " + topic + " - " + msg);
 
   String[] topicList = split(topic, '/');
-  printArray(topicList);
-
-  if(!motors.isEmpty()){
-
-    int index = PApplet.parseInt(topicList[1]);
-    mTemp = motors.get(index);
-
-    if(topicList[2].equals("pos")){
-      mTemp.updatePos(PApplet.parseFloat(msg) / 1000.0f);
-    }
-    else if(topicList[2].equals("state")){
-      mTemp.updateState(PApplet.parseInt(msg));
-    }
-  }
-
-  else{
+  //print(motors.size());
+  if ((motorArray[0] == null) && (motorArray[1] == null)) {
     println("motors not online yet");
+  } else {
+    int index = PApplet.parseInt(topicList[1]);
+    //Motor mTemp = motorArray[index];
+
+    if (topicList[2].equals("pos")) {
+      motorArray[index].updatePos(PApplet.parseFloat(msg));
+    } else if (topicList[2].equals("state")) {
+      motorArray[index].updateState(PApplet.parseInt(msg));
+    }
   }
 }
-
-public void setActiveMotor(int id) {
+/*
+void setActiveMotor(int id) {
   mTemp = motors.get(id);
   motorPos.setValue(mTemp.motorPos);
   motorTgt.setValue(mTemp.motorTarget);
   motorSpd.setValue(mTemp.motorSpeed);
 }
-
+*/
 public void activateUi(boolean val) {
   motorPos.setLock(val).setColorForeground(fgi);
   motorTgt.setLock(val).setColorForeground(fgi);
@@ -1230,24 +1213,15 @@ class Motor {
 
   Slider motorSpeedSlider, motorPosSlider, motorTargetSlider, motorStateSlider;
 
-  // parameters to be sent
-
   public int id;
 
   String idString;
 
-  //PApplet sketch;
-
-  Motor(int _id, PApplet _sketch) {
-
-    //sketch = _sketch;
+  Motor(int _id) {
     id = _id;
     idString = nf(id, 3);
-    //setupMQTT(_sketch);
 
     int offsetY =  buttonOffsetY + 2 * gridY + (5 * gridY * id);
-
-    //println(id);
 
     motorIDLabel = cp5.addTextlabel("motorid: " + id)
       .setText("MOTOR ID " + id)
@@ -1259,7 +1233,6 @@ class Motor {
     motorPosSlider = cp5.addSlider("motorpos" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 2)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motorpos")
       .setFont(p)
       .setSize(barWidth, barHeight)
@@ -1268,13 +1241,13 @@ class Motor {
       .setNumberOfTickMarks(5)
       .snapToTickMarks(false)
       .plugTo(this, "motorPos")
-      //.lock()
+      .setDecimalPrecision(5)
+      .lock()
       ;
 
     motorTargetSlider = cp5.addSlider("motortarget" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 3)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motortarget")
       .setFont(p)
       .setSize(barWidth, barHeight)
@@ -1289,7 +1262,6 @@ class Motor {
     motorSpeedSlider = cp5.addSlider("motorspeed" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 4)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motorspeed")
       .setFont(p)
       .setSize(barWidth, barHeight)
@@ -1303,30 +1275,17 @@ class Motor {
     motorStateSlider = cp5.addSlider("motorstate" + id)
       .setPosition(leftBorderUI, offsetY + gridY * 5)
       .setColorValue(255)
-      //.setLabelVisible(false)
       .setLabel("motorstate")
       .setFont(p)
       .setSize(barWidth, barHeight)
-      .setRange(0,2)
+      .setRange(0, 2)
       .setValue(getMotorState())
-      //.lock()
+      .lock()
       .setNumberOfTickMarks(3)
       .snapToTickMarks(false)
       .plugTo(this, "motorState")
       ;
   }
-
-/*
-  void setupMQTT(PApplet p) {
-    motorClient = new MQTTClient(p);
-    motorClient.connect(mqttAdress + ':' + mqttPort, str(id));
-    println(motorClient);
-
-    println("motorID " + id + ": setup complete");
-  }
-*/
-  // MQTT commands
-  // for higher precision all position values (target & pos) are scaled by 1000
 
   public void setTarget(float inVal) {
     motorTarget = inVal;
@@ -1352,35 +1311,17 @@ class Motor {
     motorPosLabel.setText("X: [" + posT + "]");
   }
 
-  // MQTT handling
-
-  /*public void messageReceived(String topic, byte[] payload) {
-    println(id + ": ");
-    println("new message: " + topic + " - " + new String(payload));
-    String msg = new String(payload);
-    String[] topicList = split(topic, '/');
-    printArray(topicList);
-
+  public void processCmd(String cmd, String payload) {
+    if (cmd.equals("pos")) {
+      motorPos = PApplet.parseFloat(payload)/1000;
+      this.motorPosSlider.setValue(motorPos);
+      println("setting new pos: " + motorPos);
+    } else if (cmd.equals("state")) {
+      motorState = PApplet.parseInt(payload);
+      this.motorPosSlider.setValue(motorState);
+      println("setting new state: " + motorState);
+    }
   }
-  */
-
-  public void processCmd(String cmd, String payload){
-    /*if(cmd.equals("pos")){
-        motorPos = float(payload)/1000;
-        this.motorPosSlider.setValue(motorPos);
-        println("setting new pos: " + motorPos);
-
-      }
-      else if(cmd.equals("state")){
-        motorState = int(payload);
-        this.motorPosSlider.setValue(motorState);
-        println("setting new state: " + motorState);
-
-      }
-      */
-  }
-
-  // public
 
   public String getMotorStateString() {
     switch (motorState) {
@@ -1419,15 +1360,18 @@ class Motor {
     this.samples.append(this.motorPos);
   }
 
-  public void updatePos(float val){
-    motorPos = val;
+  public void updatePos(float val) {
+    motorPos = val/1000.0f;
+    motorPosSlider.setValue(motorPos);
+    println("Motor" + id + " - new position: " + motorPos); 
   }
 
-  public void updateState(int val){
+  public void updateState(int val) {
     motorState = val;
+    motorStateSlider.setValue(motorState);
+    println("Motor" + id + " - new state: " + motorState);
   }
 
-  // private
 }
 
 public void sendPos(Serial s, float newPos) {

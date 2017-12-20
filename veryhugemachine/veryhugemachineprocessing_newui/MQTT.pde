@@ -20,7 +20,7 @@ void messageReceived(String topic, byte[] payload) {
   } else {
     int index = int(topicList[1]);
     //Motor mTemp = motorArray[index];
-    
+
     if (topicList[2].equals("pos")) {
       motorArray[index].updatePos(float(msg));
     } else if (topicList[2].equals("state")) {

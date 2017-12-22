@@ -31,13 +31,25 @@ void remap(){
 
 
 
+
 // row 2
 
-void collect(){
 
+
+void toggleSampling(boolean theFlag){
+  if(theFlag){
+    println("Starting to sample data.");
+    isSampling = true;
+    lastSample = millis();
+  }
+  else{
+    println("Stopping to sample data.");
+    isSampling = false;
+  }
 }
 
 void learn(){
+  
   // add websocket command to start learning
 }
 
@@ -60,6 +72,6 @@ void delSketch(){
 
 
 
-void start(){
+void startLearn(){
 
 }

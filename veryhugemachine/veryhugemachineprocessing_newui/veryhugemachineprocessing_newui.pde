@@ -51,8 +51,11 @@ ArrayList<Motor> motors;
 
 Motor[] motorArray = new Motor[2];
 
-FloatList samples;
-boolean sampling;
+
+// sampling
+
+
+
 
 // Communication
 import processing.serial.*;
@@ -99,6 +102,12 @@ int lastSample;
 boolean isSampling = false;
 int sampleState = 0;
 
+ArrayList<Sample> samples = new ArrayList<Sample>();
+
+boolean sampling = false;
+
+// ====================================================================================================
+
 int state = 0;
 
 String wsAdress = "ws://127.0.0.1";
@@ -124,6 +133,7 @@ int barWidth = 580;
 
 int caseByte = 0;
 boolean motorsOnline = true;
+
 // ====================================================================================================
 
 void setup() {
@@ -143,27 +153,17 @@ void setup() {
   createInterface();
   shapePoints = new ArrayList<PVector>();
 
-  
-
   Motor0 = new Motor(0);
   Motor1 = new Motor(1);
-/*
-  motors.add(Motor0);
-  motors.add(Motor1);
-  */
+
   motorArray[0] = new Motor(0);
   motorArray[1] = new Motor(1);
 
   motorsOnline = true;
 
-  //print(motors);
   printArray(motorArray);
 
   // Start camera interface
-
-
-  //canvasSize = cam.height;
-
 
   imageTransformDelta = new PVector(122, 122);
 
@@ -193,14 +193,13 @@ void setup() {
 void draw()
 {
   background(darkblue);
-
-
   switch(caseByte) {
   case 0:
     {
       checkFrames();
       interfaceRegular();
       displayWarped();
+      checkSampling();
       break;
     }
   case 1:
@@ -209,6 +208,4 @@ void draw()
       break;
     }
   }
-
-  //displayCamera();
 }

@@ -39,6 +39,14 @@ class Marker {
     return posN.copy();
   }
 
+  public float getNormalizedX(){
+    return posN.x;
+  }
+
+  public float getNormalizedY(){
+    return posN.y;
+  }
+
   public float getPosX() {
     return posN.x;
   }

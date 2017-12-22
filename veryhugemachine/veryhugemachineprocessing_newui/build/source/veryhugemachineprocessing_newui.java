@@ -81,8 +81,11 @@ ArrayList<Motor> motors;
 
 Motor[] motorArray = new Motor[2];
 
-FloatList samples;
-boolean sampling;
+
+// sampling
+
+
+
 
 // Communication
 
@@ -129,6 +132,12 @@ int lastSample;
 boolean isSampling = false;
 int sampleState = 0;
 
+ArrayList<Sample> samples = new ArrayList<Sample>();
+
+boolean sampling = false;
+
+// ====================================================================================================
+
 int state = 0;
 
 String wsAdress = "ws://127.0.0.1";
@@ -154,6 +163,7 @@ int barWidth = 580;
 
 int caseByte = 0;
 boolean motorsOnline = true;
+
 // ====================================================================================================
 
 public void setup() {
@@ -173,27 +183,17 @@ public void setup() {
   createInterface();
   shapePoints = new ArrayList<PVector>();
 
-  
-
   Motor0 = new Motor(0);
   Motor1 = new Motor(1);
-/*
-  motors.add(Motor0);
-  motors.add(Motor1);
-  */
+
   motorArray[0] = new Motor(0);
   motorArray[1] = new Motor(1);
 
   motorsOnline = true;
 
-  //print(motors);
   printArray(motorArray);
 
   // Start camera interface
-
-
-  //canvasSize = cam.height;
-
 
   imageTransformDelta = new PVector(122, 122);
 
@@ -223,14 +223,13 @@ public void setup() {
 public void draw()
 {
   background(darkblue);
-
-
   switch(caseByte) {
   case 0:
     {
       checkFrames();
       interfaceRegular();
       displayWarped();
+      checkSampling();
       break;
     }
   case 1:
@@ -239,8 +238,6 @@ public void draw()
       break;
     }
   }
-
-  //displayCamera();
 }
 public PVector getMarkerPosition() {
   Blob b;
@@ -589,7 +586,6 @@ public void drawFrame() {
 
   beginContour();
   for (DragPoint dP : dragPoints) {
-
     //dP.display();
     vertex(dP.pos.x, dP.pos.y);
   }
@@ -771,6 +767,12 @@ public void drawGrid(float x, float y, float w, float h, float count) {
   }
 }
 
+public void drawPoint(float _x, float _y){
+  stroke(white);
+  strokeWeight(2);
+  point(_x,_y);
+}
+
 // row 1
 
 public void zero(){
@@ -803,13 +805,25 @@ public void remap(){
 
 
 
+
 // row 2
 
-public void collect(){
 
+
+public void toggleSampling(boolean theFlag){
+  if(theFlag){
+    println("Starting to sample data.");
+    isSampling = true;
+    lastSample = millis();
+  }
+  else{
+    println("Stopping to sample data.");
+    isSampling = false;
+  }
 }
 
 public void learn(){
+  
   // add websocket command to start learning
 }
 
@@ -832,13 +846,15 @@ public void delSketch(){
 
 
 
-public void start(){
+public void startLearn(){
 
 }
 public void interfaceRegular(){
   drawCorners(canvasOffset, canvasOffset, canvasSize, canvasSize, 18);
   drawGrid(canvasOffset, canvasOffset, canvasSize, canvasSize, 10);
+  drawSamplePoints(canvasOffset,canvasSize,true);
   showDrawing();
+
   cp5.draw();
 }
 public void interfaceRemap(){
@@ -946,10 +962,10 @@ public void createInterface() {
 
   // second row
 
-  cp5.addBang("collect")
+  cp5.addToggle("toggleSampling")
     .setPosition(leftBorderUI + buttonGridX * 0, buttonOffsetY + gridY * 1)
     .setColorValue(255)
-    .setLabel("collect")
+    .setLabel("sample")
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
     ;
@@ -1101,12 +1117,11 @@ public void messageReceived(String topic, byte[] payload) {
   println("new message: " + topic + " - " + msg);
 
   String[] topicList = split(topic, '/');
-  //print(motors.size());
+
   if ((motorArray[0] == null) && (motorArray[1] == null)) {
     println("motors not online yet");
   } else {
     int index = PApplet.parseInt(topicList[1]);
-    //Motor mTemp = motorArray[index];
 
     if (topicList[2].equals("pos")) {
       motorArray[index].updatePos(PApplet.parseFloat(msg));
@@ -1115,14 +1130,7 @@ public void messageReceived(String topic, byte[] payload) {
     }
   }
 }
-/*
-void setActiveMotor(int id) {
-  mTemp = motors.get(id);
-  motorPos.setValue(mTemp.motorPos);
-  motorTgt.setValue(mTemp.motorTarget);
-  motorSpd.setValue(mTemp.motorSpeed);
-}
-*/
+
 public void activateUi(boolean val) {
   motorPos.setLock(val).setColorForeground(fgi);
   motorTgt.setLock(val).setColorForeground(fgi);
@@ -1169,6 +1177,14 @@ class Marker {
     return posN.copy();
   }
 
+  public float getNormalizedX(){
+    return posN.x;
+  }
+
+  public float getNormalizedY(){
+    return posN.y;
+  }
+
   public float getPosX() {
     return posN.x;
   }
@@ -1202,7 +1218,7 @@ class Motor {
   private float motorTarget = 0.0f;
 
   private int motorState = 0;
-  // 0 = waiting / 1 = calibrating / 2 = running
+  // 0 = waiting / 1 = calibrating / 2 = running / 3 = waiting for setup
 
   private int motorSpeed = 5000;
 
@@ -1278,7 +1294,7 @@ class Motor {
       .setLabel("motorstate")
       .setFont(p)
       .setSize(barWidth, barHeight)
-      .setRange(0, 2)
+      .setRange(0, 3)
       .setValue(getMotorState())
       .lock()
       .setNumberOfTickMarks(3)
@@ -1363,7 +1379,7 @@ class Motor {
   public void updatePos(float val) {
     motorPos = val/1000.0f;
     motorPosSlider.setValue(motorPos);
-    println("Motor" + id + " - new position: " + motorPos); 
+    println("Motor" + id + " - new position: " + motorPos);
   }
 
   public void updateState(int val) {
@@ -1372,6 +1388,76 @@ class Motor {
     println("Motor" + id + " - new state: " + motorState);
   }
 
+}
+class Sample{
+
+  private float[] data = new float[4];
+
+  Sample(float _x, float _y, float _a1, float _a2){
+    data[0] = _x;
+    data[1] = _y;
+    data[2] = _a1;
+    data[3] = _a2;
+  }
+
+  public float getX(){
+    return data[0];
+  }
+
+  public float getY(){
+    return data[1];
+  }
+}
+public void checkSampling(){
+  if(isSampling){
+    if(motorsReady()){
+      saveNewSample();
+      setNewTarget();
+    }
+    else{
+      if(lastSample + sampleFreq < millis()){
+        saveNewSample();
+        lastSample = millis();
+      }
+    }
+  }
+}
+
+
+public boolean motorsReady(){
+  return (motorArray[0].motorReady() && motorArray[1].motorReady());
+}
+
+public void setNewTarget(){
+  float t1 = random(1);
+  float t2 = random(1);
+
+  motorArray[0].setTarget(t1);
+  motorArray[1].setTarget(t2);
+
+  println("Setting new target: " + t1 + " / " + t2 + "!");
+}
+
+public void saveNewSample(){
+  samples.add(new Sample(marker.getNormalizedX(),marker.getNormalizedY(),motorArray[0].getMotorPos(),motorArray[1].getMotorPos()));
+}
+
+public void drawSamplePoints(int _offset, int _size, boolean drawTrace){
+  if(!samples.isEmpty()){
+    pushMatrix();
+    translate(_offset,_offset);
+    if(drawTrace){
+      beginShape();
+      for(Sample s : samples){
+        vertex(s.getX() * _size,s.getY() * _size);
+      }
+      endShape();
+    }
+    for(Sample s : samples){
+      drawPoint(s.getX() * _size,s.getY() * _size);
+    }
+    popMatrix();
+  }
 }
 
 public void sendPos(Serial s, float newPos) {

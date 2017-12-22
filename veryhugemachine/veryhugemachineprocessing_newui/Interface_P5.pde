@@ -78,10 +78,10 @@ void createInterface() {
 
   // second row
 
-  cp5.addBang("collect")
+  cp5.addToggle("toggleSampling")
     .setPosition(leftBorderUI + buttonGridX * 0, buttonOffsetY + gridY * 1)
     .setColorValue(255)
-    .setLabel("collect")
+    .setLabel("sample")
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
     ;

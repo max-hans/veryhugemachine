@@ -5,7 +5,7 @@ class Motor {
   private float motorTarget = 0.0;
 
   private int motorState = 0;
-  // 0 = waiting / 1 = calibrating / 2 = running
+  // 0 = waiting / 1 = calibrating / 2 = running / 3 = waiting for setup
 
   private int motorSpeed = 5000;
 
@@ -81,7 +81,7 @@ class Motor {
       .setLabel("motorstate")
       .setFont(p)
       .setSize(barWidth, barHeight)
-      .setRange(0, 2)
+      .setRange(0, 3)
       .setValue(getMotorState())
       .lock()
       .setNumberOfTickMarks(3)
@@ -166,7 +166,7 @@ class Motor {
   public void updatePos(float val) {
     motorPos = val/1000.0;
     motorPosSlider.setValue(motorPos);
-    println("Motor" + id + " - new position: " + motorPos); 
+    println("Motor" + id + " - new position: " + motorPos);
   }
 
   public void updateState(int val) {

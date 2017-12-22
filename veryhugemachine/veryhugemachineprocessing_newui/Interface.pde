@@ -100,7 +100,6 @@ void drawFrame() {
 
   beginContour();
   for (DragPoint dP : dragPoints) {
-
     //dP.display();
     vertex(dP.pos.x, dP.pos.y);
   }
@@ -280,4 +279,10 @@ void drawGrid(float x, float y, float w, float h, float count) {
       drawCross(x + (delta * i), y + (delta * j));
     }
   }
+}
+
+void drawPoint(float _x, float _y){
+  stroke(white);
+  strokeWeight(2);
+  point(_x,_y);
 }

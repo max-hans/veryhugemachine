@@ -2,8 +2,11 @@ const WebSocket = require('ws');
 brain = require('brain');
 
 const fs = require('fs');
+var argv = require('minimist')(process.argv.slice(2));
+console.log(argv);
+var wsPort = argv.p;
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: wsPort });
 
 var clientIp;
 var net = new brain.NeuralNetwork({
@@ -13,6 +16,8 @@ var net = new brain.NeuralNetwork({
 
 var inData = [];
 
+
+
 var netParams = {
 	iterations: 10000,
 	log: true,
@@ -21,7 +26,9 @@ var netParams = {
 }
 
 wss.on('connection', function connection(ws,req) {
-	req.connection.remoteAddress;
+  console.log("new connection");
+
+	console.log(req.connection.remoteAddress);
 	ws.on('message', function incoming(message) {
 
 		console.log('received: %s', message);
@@ -29,12 +36,7 @@ wss.on('connection', function connection(ws,req) {
 		var cmd = message.split(",");
 
 		switch(cmd[0]){
-			case "l":{
-				console.log("starting learning procedure");
-				console.log(cmd);
-				startLearning();
-				break;
-			}
+
 			case "ip":{
 				console.log("received position data");
 				console.log(cmd);
@@ -42,22 +44,17 @@ wss.on('connection', function connection(ws,req) {
 				break;
 			}
 
-			case "iv":{
-				console.log("received vector data");
-				console.log(cmd);
-				addToDatasetVec(cmd);
-				break;
-			}
+      case "l":{
+        console.log("starting learning procedure");
+        console.log(cmd);
+        startLearning();
+        break;
+      }
 
 			case "o":{
 				console.log("received request");
 				console.log(cmd);
 				getDataPos(cmd);
-				break;
-			}
-			case "s":{
-				console.log("saving net to file");
-				saveNet(cmd[1]);
 				break;
 			}
 
@@ -101,6 +98,7 @@ function getDataPos(data){
 
 function sendData(inData){
 	console.log(inData);
+  // add send command
 }
 
 function saveNet(path){
@@ -123,6 +121,7 @@ function loadNet(path){
 	});
 	net.fromJSON(json);
 }
+
 
 ////////////////////////////////////////////////////////////////////////
 

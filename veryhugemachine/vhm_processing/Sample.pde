@@ -16,4 +16,27 @@ class Sample{
   public float getY(){
     return data[1];
   }
+
+  public void printData(){
+    for(int i = 0; i<data.length;i++){
+      print(data[i]);
+      if(i == data.length-1){
+        println();
+      }
+      else{
+        print(" - ");
+      }
+    }
+  }
+
+  public String dataToString(){
+    String str = "";
+    for(int i = 0; i<data.length;i++){
+      str += data[i];
+      if(i != 3){
+        str+=",";
+      }
+    }
+    return str;
+  }
 }

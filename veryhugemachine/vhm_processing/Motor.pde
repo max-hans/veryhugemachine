@@ -26,7 +26,7 @@ class Motor {
 
     int offsetY =  buttonOffsetY + 2 * gridY + (5 * gridY * id);
 
-    motorIDLabel = cp5.addTextlabel("motorid: " + id)
+    motorIDLabel = cp5.addTextlabel("motorid" + id)
       .setText("MOTOR ID " + id)
       .setPosition(leftBorderUI, offsetY + gridY)
       .setColorValue(255)

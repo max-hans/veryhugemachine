@@ -86,7 +86,7 @@ void createInterface() {
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("learn")
+  cp5.addBang("startLearn")
     .setPosition(leftBorderUI + buttonGridX * 1, buttonOffsetY + gridY * 1)
     .setColorValue(255)
     .setLabel("learn")
@@ -145,41 +145,3 @@ cp5.addBang("startSketch")
     .setSize(buttonWidth, buttonHeight)
     ;
 }
-
-public void controlEvent(ControlEvent theEvent) {
-  println(theEvent);
-  if (theEvent.isAssignableFrom(Textfield.class)) {
-
-    //println("controlEvent: accessing a string from controller '"+theEvent.getName()+"': "+theEvent.getStringValue()
-    switch(theEvent.getName()) {
-    case "ip_adress":
-      updateIpAdress(theEvent.getStringValue());
-      break;
-    }
-  }
-}
-
-
-// Interface stuff
-
-void toggleVideo() {
-  drawVideo = !drawVideo;
-}
-
-// Update functions
-
-// void updateMarkerPos() {
-//   markerPos = marker.getPosNormalized();
-//   String xT = nf(markerPos.x,1,5);
-//   String yT = nf(markerPos.y,1,5);
-//   coordX.setText("X: [" + xT + "]");
-//   coordY.setText("Y: [" + yT + "]");
-// }
-
-
-/*
-void updateMotorPos() {
- motor1Pos.setText("Motor1: [" + motor1.motorPosScaled + "]");
- motor2Pos.setText("Motor2: [" + motor2.motorPosScaled + "]");
- }
- */

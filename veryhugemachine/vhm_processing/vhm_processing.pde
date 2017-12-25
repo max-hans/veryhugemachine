@@ -9,6 +9,9 @@ import org.opencv.core.Mat;
 import org.opencv.core.CvType;
 OpenCV opencv;
 
+import java.io.*;
+
+
 // UI Colors
 
 color darkblue = color(26, 26, 30);
@@ -51,12 +54,6 @@ ArrayList<Motor> motors;
 
 Motor[] motorArray = new Motor[2];
 
-
-// sampling
-
-
-
-
 // Communication
 import processing.serial.*;
 
@@ -72,6 +69,7 @@ PFont p; // regular font
 PFont pb; // bold font
 
 // Tracking
+
 import processing.video.*;
 Capture cam;
 boolean newFrame=false;
@@ -94,8 +92,7 @@ ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
 
 PVector imageTransformDelta;
 
-float[] motorPositions = new float[2];
-boolean[] motorUpdated = {false, false};
+// Motors
 
 int sampleFreq = 1000;
 int lastSample;
@@ -106,12 +103,17 @@ ArrayList<Sample> samples = new ArrayList<Sample>();
 
 boolean sampling = false;
 
+// AI
+
+boolean waitingForPos = false;
+
 // ====================================================================================================
 
 int state = 0;
 
-String wsAdress = "ws://127.0.0.1";
-int wsPort = 8080;
+//String wsAdress = "ws://127.0.0.1";
+//String wsAdress = "ws://localhost";
+//int wsPort = 8080;
 //String mqttAdress = "mqtt://192.168.2.101";
 String mqttAdress = "mqtt://127.0.0.1";
 int mqttPort = 1883;
@@ -146,15 +148,18 @@ void setup() {
   cp5 = new ControlP5(this);
   setupCamera("USB 2.0 Camera");
 
-  motors = new ArrayList<Motor>();
+  client = new MQTTClient(this);
+  client.connect(mqttAdress + ':' + mqttPort, "main");
 
-  setupMQTTglobal();
+  client.subscribe("/register");
+  client.subscribe("/+/pos");
+  client.subscribe("/+/state");
+
+  wsc = new WebsocketClient(this,"ws://localhost:8080");
 
   createInterface();
-  shapePoints = new ArrayList<PVector>();
 
-  Motor0 = new Motor(0);
-  Motor1 = new Motor(1);
+  shapePoints = new ArrayList<PVector>();
 
   motorArray[0] = new Motor(0);
   motorArray[1] = new Motor(1);
@@ -184,7 +189,6 @@ void setup() {
   for (PVector P : transformPoints) {
     dragPoints.add(new DragPoint(P));
   }
-
   marker = new Marker(0.5, 0.5, canvasSize, canvasSize);
 }
 

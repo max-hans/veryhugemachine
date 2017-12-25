@@ -233,11 +233,13 @@ void mouseReleased() {
   mouseLocked = false;
 }
 
+/*
 void keyPressed() {
   motors.clear();
   //if (key == 'm')sendPos();
   //if (key == 'l')activateLearning();
 }
+*/
 
 void drawCross(float x, float y) {
   stroke(white);
@@ -285,4 +287,8 @@ void drawPoint(float _x, float _y){
   stroke(white);
   strokeWeight(2);
   point(_x,_y);
+}
+
+void toggleVideo() {
+  drawVideo = !drawVideo;
 }

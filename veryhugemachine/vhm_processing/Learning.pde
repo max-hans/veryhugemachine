@@ -1,5 +1,7 @@
 // ====================================================================================================
 
+/*
+
 void startSampling() {
   if (motors.size() > 0) {
     println("Starting sampling procedure...");
@@ -32,3 +34,5 @@ void sample() {
     lastSample = millis();
   }
 }
+
+*/

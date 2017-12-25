@@ -29,12 +29,7 @@ void remap(){
   }
 }
 
-
-
-
 // row 2
-
-
 
 void toggleSampling(boolean theFlag){
   if(theFlag){
@@ -48,17 +43,19 @@ void toggleSampling(boolean theFlag){
   }
 }
 
-void learn(){
-  
-  // add websocket command to start learning
+void startLearn(){
+  println("starting transfer of samples");
+  transferSamples();
+  println("finished transferring samples");
+  activateLearning();
 }
 
 void save(){
-  // add websocket command to save data
+  saveSamplesToFile();
 }
 
 void load(){
-  // keep?
+  loadSamplesFromFile();
 }
 
 // row 3
@@ -68,10 +65,4 @@ void startSketch(){
 
 void delSketch(){
   deleteDraw();
-}
-
-
-
-void startLearn(){
-
 }

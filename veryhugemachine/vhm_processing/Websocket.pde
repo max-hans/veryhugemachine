@@ -1,36 +1,45 @@
 // Websocket
 
+void wsSendSample(Sample sendSample){
 
-
-
-void updateIpAdress(String inputString) {
-  wsAdress = inputString;
+  print("sending command -> new data : ");
+  String msg = "ip,";
+  for(int i = 0; i<4;i++){
+    msg+=sendSample.data[i];
+    if(i!=3){
+      msg+=',';
+    }
+  }
+  println(msg.substring(3));
+  wsc.sendMessage(msg);
 }
 
-void connectWS() {
-  wsc= new WebsocketClient(this, wsAdress + ':' + wsPort);
+void activateLearning() {
+  println("sending command -> start learning");
+  wsc.sendMessage("l");
 }
 
+void requestData(float _x, float _y){
+  println("sending command -> request data");
+  String msg = "o," + _x + "," + _y;
+  wsc.sendMessage(msg);
+}
 
+void saveNetToFile(String filename){
+  println("sending command -> save net");
+  String msg = "s," + filename;
+  wsc.sendMessage(msg);
+}
 
+void webSocketEvent(String msg){
+  if(waitingForPos){
+    waitingForPos = false;
+    String[] inData = split(msg,',');
 
-// Websocket Communication
-/*
-void sendDataPos() {
- String msg = "ip" + ',' + marker.getPosX() + ',' + marker.getPosY() + ',' + motor1.motorPosScaled + ',' + motor2.motorPosScaled;
- wsc.sendMessage(msg);
- }
- 
- void sendDataVec() {
- String msg = "iv" + ',' + marker.getPosX() + ',' + marker.getPosY() + ',' + marker.lastPosX() + ',' + marker.lastPosY() + ',' + motor1.motorPosScaled + ',' + motor2.motorPosScaled;
- wsc.sendMessage(msg);
- }
- 
- void sendPos() {
- wsc.sendMessage(markerPos.x + "," + markerPos.y);
- }
- 
- void activateLearning() {
- wsc.sendMessage("enableLearning");
- }
- */
+  }
+}
+
+void commandMotors(float _x, float _y){
+  motorArray[0].setTarget(_x);
+  motorArray[1].setTarget(_y);
+}

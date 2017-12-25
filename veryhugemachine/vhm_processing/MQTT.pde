@@ -1,11 +1,7 @@
 // MQTT setup
 
-void setupMQTTglobal() {
-  client = new MQTTClient(this);
-  client.connect(mqttAdress + ':' + mqttPort, "main");
-  client.subscribe("/register");
-  client.subscribe("/+/pos");
-  client.subscribe("/+/state");
+void subscribeMQTT() {
+  
 }
 
 void messageReceived(String topic, byte[] payload) {

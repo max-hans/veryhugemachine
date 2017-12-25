@@ -10,6 +10,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Size; 
 import org.opencv.core.Mat; 
 import org.opencv.core.CvType; 
+import java.io.*; 
 import controlP5.*; 
 import processing.serial.*; 
 import websockets.*; 
@@ -26,7 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream; 
 import java.io.IOException; 
 
-public class veryhugemachineprocessing_newui extends PApplet {
+public class vhm_processing extends PApplet {
 
 //
 // OpenCV
@@ -38,6 +39,9 @@ public class veryhugemachineprocessing_newui extends PApplet {
 
 
 OpenCV opencv;
+
+
+
 
 // UI Colors
 
@@ -81,12 +85,6 @@ ArrayList<Motor> motors;
 
 Motor[] motorArray = new Motor[2];
 
-
-// sampling
-
-
-
-
 // Communication
 
 
@@ -102,6 +100,7 @@ PFont p; // regular font
 PFont pb; // bold font
 
 // Tracking
+
 
 Capture cam;
 boolean newFrame=false;
@@ -124,8 +123,7 @@ ArrayList<DragPoint> dragPoints = new ArrayList<DragPoint>();
 
 PVector imageTransformDelta;
 
-float[] motorPositions = new float[2];
-boolean[] motorUpdated = {false, false};
+// Motors
 
 int sampleFreq = 1000;
 int lastSample;
@@ -136,12 +134,17 @@ ArrayList<Sample> samples = new ArrayList<Sample>();
 
 boolean sampling = false;
 
+// AI
+
+boolean waitingForPos = false;
+
 // ====================================================================================================
 
 int state = 0;
 
-String wsAdress = "ws://127.0.0.1";
-int wsPort = 8080;
+//String wsAdress = "ws://127.0.0.1";
+//String wsAdress = "ws://localhost";
+//int wsPort = 8080;
 //String mqttAdress = "mqtt://192.168.2.101";
 String mqttAdress = "mqtt://127.0.0.1";
 int mqttPort = 1883;
@@ -176,15 +179,18 @@ public void setup() {
   cp5 = new ControlP5(this);
   setupCamera("USB 2.0 Camera");
 
-  motors = new ArrayList<Motor>();
+  client = new MQTTClient(this);
+  client.connect(mqttAdress + ':' + mqttPort, "main");
 
-  setupMQTTglobal();
+  client.subscribe("/register");
+  client.subscribe("/+/pos");
+  client.subscribe("/+/state");
+
+  wsc = new WebsocketClient(this,"ws://localhost:8080");
 
   createInterface();
-  shapePoints = new ArrayList<PVector>();
 
-  Motor0 = new Motor(0);
-  Motor1 = new Motor(1);
+  shapePoints = new ArrayList<PVector>();
 
   motorArray[0] = new Motor(0);
   motorArray[1] = new Motor(1);
@@ -214,7 +220,6 @@ public void setup() {
   for (PVector P : transformPoints) {
     dragPoints.add(new DragPoint(P));
   }
-
   marker = new Marker(0.5f, 0.5f, canvasSize, canvasSize);
 }
 
@@ -719,11 +724,13 @@ public void mouseReleased() {
   mouseLocked = false;
 }
 
-public void keyPressed() {
+/*
+void keyPressed() {
   motors.clear();
   //if (key == 'm')sendPos();
   //if (key == 'l')activateLearning();
 }
+*/
 
 public void drawCross(float x, float y) {
   stroke(white);
@@ -773,6 +780,10 @@ public void drawPoint(float _x, float _y){
   point(_x,_y);
 }
 
+public void toggleVideo() {
+  drawVideo = !drawVideo;
+}
+
 // row 1
 
 public void zero(){
@@ -803,12 +814,7 @@ public void remap(){
   }
 }
 
-
-
-
 // row 2
-
-
 
 public void toggleSampling(boolean theFlag){
   if(theFlag){
@@ -822,17 +828,19 @@ public void toggleSampling(boolean theFlag){
   }
 }
 
-public void learn(){
-  
-  // add websocket command to start learning
+public void startLearn(){
+  println("starting transfer of samples");
+  transferSamples();
+  println("finished transferring samples");
+  activateLearning();
 }
 
 public void save(){
-  // add websocket command to save data
+  saveSamplesToFile();
 }
 
 public void load(){
-  // keep?
+  loadSamplesFromFile();
 }
 
 // row 3
@@ -843,16 +851,10 @@ public void startSketch(){
 public void delSketch(){
   deleteDraw();
 }
-
-
-
-public void startLearn(){
-
-}
 public void interfaceRegular(){
   drawCorners(canvasOffset, canvasOffset, canvasSize, canvasSize, 18);
   drawGrid(canvasOffset, canvasOffset, canvasSize, canvasSize, 10);
-  drawSamplePoints(canvasOffset,canvasSize,true);
+  drawSamplePoints(canvasOffset,canvasSize,false);
   showDrawing();
 
   cp5.draw();
@@ -970,7 +972,7 @@ public void createInterface() {
     .setSize(buttonWidth, buttonHeight)
     ;
 
-  cp5.addBang("learn")
+  cp5.addBang("startLearn")
     .setPosition(leftBorderUI + buttonGridX * 1, buttonOffsetY + gridY * 1)
     .setColorValue(255)
     .setLabel("learn")
@@ -1029,47 +1031,11 @@ cp5.addBang("startSketch")
     .setSize(buttonWidth, buttonHeight)
     ;
 }
-
-public void controlEvent(ControlEvent theEvent) {
-  println(theEvent);
-  if (theEvent.isAssignableFrom(Textfield.class)) {
-
-    //println("controlEvent: accessing a string from controller '"+theEvent.getName()+"': "+theEvent.getStringValue()
-    switch(theEvent.getName()) {
-    case "ip_adress":
-      updateIpAdress(theEvent.getStringValue());
-      break;
-    }
-  }
-}
-
-
-// Interface stuff
-
-public void toggleVideo() {
-  drawVideo = !drawVideo;
-}
-
-// Update functions
-
-// void updateMarkerPos() {
-//   markerPos = marker.getPosNormalized();
-//   String xT = nf(markerPos.x,1,5);
-//   String yT = nf(markerPos.y,1,5);
-//   coordX.setText("X: [" + xT + "]");
-//   coordY.setText("Y: [" + yT + "]");
-// }
-
-
-/*
-void updateMotorPos() {
- motor1Pos.setText("Motor1: [" + motor1.motorPosScaled + "]");
- motor2Pos.setText("Motor2: [" + motor2.motorPosScaled + "]");
- }
- */
 // ====================================================================================================
 
-public void startSampling() {
+/*
+
+void startSampling() {
   if (motors.size() > 0) {
     println("Starting sampling procedure...");
     backupFile = createWriter(getDateString() + "_data.csv");
@@ -1082,7 +1048,7 @@ public void startSampling() {
   println("No motors attached ... =(");
 }
 
-public void stopSampling() {
+void stopSampling() {
   if (sampling) {
     println("Stopping sampling procedure...");
     println("Writing to file.");
@@ -1093,7 +1059,7 @@ public void stopSampling() {
   }
 }
 
-public void sample() {
+void sample() {
   if (sampling) {
     for (Motor m : motors) {
       m.samplePos();
@@ -1101,14 +1067,12 @@ public void sample() {
     lastSample = millis();
   }
 }
+
+*/
 // MQTT setup
 
-public void setupMQTTglobal() {
-  client = new MQTTClient(this);
-  client.connect(mqttAdress + ':' + mqttPort, "main");
-  client.subscribe("/register");
-  client.subscribe("/+/pos");
-  client.subscribe("/+/state");
+public void subscribeMQTT() {
+  
 }
 
 public void messageReceived(String topic, byte[] payload) {
@@ -1239,7 +1203,7 @@ class Motor {
 
     int offsetY =  buttonOffsetY + 2 * gridY + (5 * gridY * id);
 
-    motorIDLabel = cp5.addTextlabel("motorid: " + id)
+    motorIDLabel = cp5.addTextlabel("motorid" + id)
       .setText("MOTOR ID " + id)
       .setPosition(leftBorderUI, offsetY + gridY)
       .setColorValue(255)
@@ -1407,6 +1371,29 @@ class Sample{
   public float getY(){
     return data[1];
   }
+
+  public void printData(){
+    for(int i = 0; i<data.length;i++){
+      print(data[i]);
+      if(i == data.length-1){
+        println();
+      }
+      else{
+        print(" - ");
+      }
+    }
+  }
+
+  public String dataToString(){
+    String str = "";
+    for(int i = 0; i<data.length;i++){
+      str += data[i];
+      if(i != 3){
+        str+=",";
+      }
+    }
+    return str;
+  }
 }
 public void checkSampling(){
   if(isSampling){
@@ -1460,6 +1447,55 @@ public void drawSamplePoints(int _offset, int _size, boolean drawTrace){
   }
 }
 
+public void transferSamples(){
+  for(Sample s : samples){
+    s.printData();
+    wsSendSample(s);
+  }
+}
+
+// method to save sampled points to a file
+public void saveSamplesToFile(){
+  PrintWriter writer = createWriter("exports/" + getDateString() + "_data.txt");
+  for(Sample s : samples){
+    writer.println(s.dataToString());
+    println("Exporting sample " + s.dataToString());
+  }
+  writer.flush();
+  writer.close();
+  println("Done exporting.");
+}
+
+public void importSamples(File importFile){
+  if (importFile == null) {
+    println("Window was closed or the user hit cancel.");
+  } else {
+
+    BufferedReader reader = createReader(importFile.getAbsolutePath());
+    String line = null;
+    samples.clear();
+    try {
+        int counter = 0;
+      while ((line = reader.readLine()) != null) {
+        String[] pieces = split(line, ',');
+        println("Importing sample " + counter + " : " + pieces[0] + " | "+ pieces[1] + " | "+ pieces[2] + " | "+ pieces[3]);
+        samples.add(new Sample(PApplet.parseFloat(pieces[0]),PApplet.parseFloat(pieces[1]),PApplet.parseFloat(pieces[2]),PApplet.parseFloat(pieces[3])));
+        counter++;
+      }
+      reader.close();
+      println("Done importing. Found " + counter + " samples.");
+    }
+    catch (IOException e) {
+        e.printStackTrace();
+      }
+  }
+}
+
+
+  public void loadSamplesFromFile(){
+    selectInput("Select a file to process:", "importSamples");
+  }
+
 public void sendPos(Serial s, float newPos) {
 }
 public void resetTransformArray(PImage _imgT) {
@@ -1496,40 +1532,49 @@ public void setupCamera(String camId) {
 }
 // Websocket
 
+public void wsSendSample(Sample sendSample){
 
-
-
-public void updateIpAdress(String inputString) {
-  wsAdress = inputString;
+  print("sending command -> new data : ");
+  String msg = "ip,";
+  for(int i = 0; i<4;i++){
+    msg+=sendSample.data[i];
+    if(i!=3){
+      msg+=',';
+    }
+  }
+  println(msg.substring(3));
+  wsc.sendMessage(msg);
 }
 
-public void connectWS() {
-  wsc= new WebsocketClient(this, wsAdress + ':' + wsPort);
+public void activateLearning() {
+  println("sending command -> start learning");
+  wsc.sendMessage("l");
 }
 
+public void requestData(float _x, float _y){
+  println("sending command -> request data");
+  String msg = "o," + _x + "," + _y;
+  wsc.sendMessage(msg);
+}
 
+public void saveNetToFile(String filename){
+  println("sending command -> save net");
+  String msg = "s," + filename;
+  wsc.sendMessage(msg);
+}
 
+public void webSocketEvent(String msg){
+  if(waitingForPos){
+    waitingForPos = false;
+    String[] inData = split(msg,',');
 
-// Websocket Communication
-/*
-void sendDataPos() {
- String msg = "ip" + ',' + marker.getPosX() + ',' + marker.getPosY() + ',' + motor1.motorPosScaled + ',' + motor2.motorPosScaled;
- wsc.sendMessage(msg);
- }
- 
- void sendDataVec() {
- String msg = "iv" + ',' + marker.getPosX() + ',' + marker.getPosY() + ',' + marker.lastPosX() + ',' + marker.lastPosY() + ',' + motor1.motorPosScaled + ',' + motor2.motorPosScaled;
- wsc.sendMessage(msg);
- }
- 
- void sendPos() {
- wsc.sendMessage(markerPos.x + "," + markerPos.y);
- }
- 
- void activateLearning() {
- wsc.sendMessage("enableLearning");
- }
- */
+  }
+}
+
+public void commandMotors(float _x, float _y){
+  motorArray[0].setTarget(_x);
+  motorArray[1].setTarget(_y);
+}
 
 public void warpImg(PImage targetImg, int warpSize, ArrayList<PVector> warpPoints) {
 
@@ -1564,7 +1609,7 @@ public Mat getPerspectiveTransformation(ArrayList<PVector> inputPoints, int w, i
 }
   public void settings() {  size(1920, 1080); }
   static public void main(String[] passedArgs) {
-    String[] appletArgs = new String[] { "veryhugemachineprocessing_newui" };
+    String[] appletArgs = new String[] { "vhm_processing" };
     if (passedArgs != null) {
       PApplet.main(concat(appletArgs, passedArgs));
     } else {

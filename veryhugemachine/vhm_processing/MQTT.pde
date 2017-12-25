@@ -1,7 +1,7 @@
 // MQTT setup
 
 void subscribeMQTT() {
-  
+
 }
 
 void messageReceived(String topic, byte[] payload) {
@@ -24,8 +24,10 @@ void messageReceived(String topic, byte[] payload) {
   }
 }
 
+/*
 void activateUi(boolean val) {
   motorPos.setLock(val).setColorForeground(fgi);
   motorTgt.setLock(val).setColorForeground(fgi);
   motorSpd.setLock(val).setColorForeground(fgi);
 }
+*/

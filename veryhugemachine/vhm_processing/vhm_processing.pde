@@ -16,8 +16,16 @@ import java.io.*;
 
 color darkblue = color(26, 26, 30);
 color white = color(255, 255, 255);
-color col1 = color(255, 33, 81);
+
+color col1 = color(230);
+color col1_2 = color(230,150);
 color col2 = color(27, 198, 180);
+
+/*
+color col1 = color(255, 33, 81);
+color col1_2 = color(255,33,81,150);
+color col2 = color(27, 198, 180);
+*/
 
 // UI
 import controlP5.*;

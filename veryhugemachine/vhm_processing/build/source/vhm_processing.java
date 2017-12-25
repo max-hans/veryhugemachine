@@ -47,8 +47,16 @@ OpenCV opencv;
 
 int darkblue = color(26, 26, 30);
 int white = color(255, 255, 255);
-int col1 = color(255, 33, 81);
+
+int col1 = color(230);
+int col1_2 = color(230,150);
 int col2 = color(27, 198, 180);
+
+/*
+color col1 = color(255, 33, 81);
+color col1_2 = color(255,33,81,150);
+color col2 = color(27, 198, 180);
+*/
 
 // UI
 
@@ -897,11 +905,14 @@ Slider motorPos;
 Slider motorTgt;
 Slider motorSpd;
 
-int fga = color(25, 181, 137);
-int fgi = color(255, 100);
 
-int bga = color(25, 181, 137, 50);
-int bgi = color(200, 100);
+/*
+color fga = color(25, 181, 137);
+color fgi = color(255, 100);
+
+color bga = color(25, 181, 137, 50);
+color bgi = color(200, 100);
+*/
 
 float motorPosition = 0;
 float motorTarget = 0;
@@ -926,15 +937,18 @@ public void createInterface() {
 
   ControlFont font = new ControlFont(p);
 
-  cp5.setColorForeground(fga);
-  cp5.setColorBackground(bga);
+  cp5.setColorForeground(col1);
+  cp5.setColorBackground(col1_2);
   cp5.setFont(font);
-  cp5.setColorActive(fga);
+  cp5.setColorActive(col1);
 
-  remapControl.setColorForeground(fga);
-  remapControl.setColorBackground(bga);
+
+  //cp5.setColorLabel(col1);
+
+  remapControl.setColorForeground(col1);
+  remapControl.setColorBackground(col1_2);
   remapControl.setFont(font);
-  remapControl.setColorActive(fga);
+  remapControl.setColorActive(col1);
 
   // first row
 
@@ -942,9 +956,11 @@ public void createInterface() {
     .setPosition(leftBorderUI + buttonGridX * 0, buttonOffsetY + gridY * 0)
     .setColorValue(255)
     .setLabel("zero all")
+    .setColorValueLabel(darkblue)
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
     ;
+
 
   cp5.addBang("stopall")
     .setPosition(leftBorderUI + buttonGridX * 1, buttonOffsetY + gridY * 0)
@@ -952,6 +968,7 @@ public void createInterface() {
     .setLabel("stop all")
     .setFont(p)
     .setSize(buttonWidth, buttonHeight)
+    .setColorValueLabel(darkblue)
     ;
 
   remapControl.addBang("remap")
@@ -1072,7 +1089,7 @@ void sample() {
 // MQTT setup
 
 public void subscribeMQTT() {
-  
+
 }
 
 public void messageReceived(String topic, byte[] payload) {
@@ -1095,11 +1112,13 @@ public void messageReceived(String topic, byte[] payload) {
   }
 }
 
-public void activateUi(boolean val) {
+/*
+void activateUi(boolean val) {
   motorPos.setLock(val).setColorForeground(fgi);
   motorTgt.setLock(val).setColorForeground(fgi);
   motorSpd.setLock(val).setColorForeground(fgi);
 }
+*/
 class Marker {
   PVector posN;
   PVector lastPos;

@@ -3,7 +3,7 @@
 
 void runToZero() {
   axis1.setSpeed(-motorSpeed);
-  while (!digitalRead(SENSORPIN1)) {
+  while (digitalRead(SENSORPIN1)) {
     axis1.runSpeed();
   }
   axis1.setCurrentPosition(0);

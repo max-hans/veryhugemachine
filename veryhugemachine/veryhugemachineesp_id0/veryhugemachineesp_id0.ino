@@ -18,7 +18,7 @@
 #define IDPIN1 D6
 #define IDPIN2 D7
 
-#define IDPIN A0
+#define IDNR 0
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -49,9 +49,9 @@ unsigned int posUpdateFreq = 500;
 int eepromAdress = 0;
 
 // motor
-unsigned int normalAccel = 5000;
+unsigned int normalAccel = 4000;
 unsigned long maxDist;
-int motorSpeed = 4000;
+int motorSpeed = 500;
 
 int statusByte = 0;
 boolean calibrated = false;
@@ -62,8 +62,8 @@ boolean doPublishPos = false;
 
 void setup() {
 
-  pinMode(SENSORPIN1, INPUT);
-  pinMode(SENSORPIN2, INPUT);
+  pinMode(SENSORPIN1, INPUT_PULLUP);
+  pinMode(SENSORPIN2, INPUT_PULLUP);
 
   pinMode(IDPIN0, INPUT);
   pinMode(IDPIN1, INPUT);
@@ -74,7 +74,8 @@ void setup() {
   Serial.println("test");
   delay(10);
 
-  id = getID();
+  id = IDNR;
+  //id = getID();
 
   if (id < 100) {
     prefix += "0";
@@ -118,7 +119,7 @@ void loop() {
   switch (statusByte) {
     case 0: {
 
-        if (!digitalRead(SENSORPIN1)) {
+        if (digitalRead(SENSORPIN1)) {
           axis1.runSpeed();
         }
         else {
@@ -130,7 +131,7 @@ void loop() {
         break;
       }
     case 1: {
-        if (!digitalRead(SENSORPIN2)) {
+        if (digitalRead(SENSORPIN2)) {
           axis1.runSpeed();
         }
         else {
@@ -148,6 +149,12 @@ void loop() {
       }
   }
   if (doPublishPos) postPos();
+
+   Serial.print("D1: ");
+  Serial.println(digitalRead(SENSORPIN1));
+  Serial.print("D2: ");
+  Serial.println(digitalRead(SENSORPIN2));
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
